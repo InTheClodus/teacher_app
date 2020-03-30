@@ -1,0 +1,1 @@
+{"dependencyGraph":[{"name":"devicelocale","dependencies":[]},{"name":"nfc_in_flutter","dependencies":[]},{"name":"package_info","dependencies":[]},{"name":"path_provider","dependencies":[]},{"name":"qrscan","dependencies":[]},{"name":"shared_preferences","dependencies":[]},{"name":"url_launcher","dependencies":[]}]}
