@@ -54,23 +54,6 @@ class _ChargeState extends State<Charge> with SingleTickerProviderStateMixin {
     super.dispose();
   }
 
-  List<OrderRecord> _listOrderRecord = [];
-
-// 查詢訂單紀錄
-  Future<void> getOrderRecord() async {
-    var response = await ParseObject('OrderRecord').getAll();
-    if (response.success) {
-      setState(() {
-        _listOrderRecord.clear();
-        for (var data in response.result) {
-          _listOrderRecord.add(OrderRecord(data['objectId'], data['OrderName'],
-              data['OredrDate'], data['OrderPrice'], data['OrederStatus']));
-        }
-        print(response.count);
-      });
-    }
-  }
-
   Future<void> getOrder() async {
     var queryBuilder = QueryBuilder<OrderRecords>(OrderRecords())
       ..whereStartsWith(OrderRecords.keyName, "学费");
@@ -79,13 +62,24 @@ class _ChargeState extends State<Charge> with SingleTickerProviderStateMixin {
 
     if (response.success) {
       print("====================getOrder====================");
-      print(((response.results as List<dynamic>).first as OrderRecords)
-          .toString());
+      print(((response.results as List<dynamic>).first as OrderRecords).toString());
     } else {
       print(response.error.message);
     }
   }
 
+  /*
+  * 查詢訂單
+  * 查詢StudentOrderItem表
+  * amount實交
+  * price裡price是應交
+  * */
+  Future<void> _getStudentOrder()async{
+    final user = await ParseUser.currentUser() as ParseUser;
+    if(user!=null){
+
+    }
+  }
 //  @override
 //  void deactivate() {
 //    var bool = ModalRoute.of(context).isCurrent;
@@ -180,38 +174,5 @@ class _ChargeState extends State<Charge> with SingleTickerProviderStateMixin {
         ],
       ),
     );
-
-//        body: ListView.separated(
-//            itemBuilder: (BuildContext context, int index) {
-//              return ListTile(
-//                title: HistoricalOrder(
-//                    'img/cat.jpg',
-//                    _listOrderRecord[index].orderName,
-//                    _listOrderRecord[index].orderDate,
-//                    _listOrderRecord[index].orderPrice,
-//                    _listOrderRecord[index].orderStatus,
-//                    index),
-//                onTap: () {
-//                  Navigator.push(
-//                      context,
-//                      MaterialPageRoute(
-//                          builder: (context) =>
-//                              _listOrderRecord[index].orderStatus == "待收款"
-//                                  ? ChargePage(
-//                                      number: index,
-//                                      objectId:
-//                                          _listOrderRecord[index].objectId,
-//                                    )
-//                                  : OrderInfo(
-//                                      number: index,
-//                                    )));
-//                },
-//              );
-//            },
-//            separatorBuilder: (BuildContext context, int index) {
-//              return divider1;
-//            },
-//            itemCount: _listOrderRecord.length),
-
   }
 }

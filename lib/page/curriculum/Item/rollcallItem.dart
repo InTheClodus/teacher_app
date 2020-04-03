@@ -10,15 +10,13 @@ import 'package:teacher_app/util/Adapt.dart';
 
 class RollCallItem extends StatelessWidget {
 
-
-  String stu_img;//頭像
   String stu_name;//姓名
   final Widget state;//狀態
 
 
 //  @required VoidCallback onTap;
 
-  RollCallItem(this.stu_img,this.stu_name,this.state);
+  RollCallItem(this.stu_name,this.state);
 
   @override
   Widget build(BuildContext context) {
@@ -28,14 +26,14 @@ class RollCallItem extends StatelessWidget {
           children: <Widget>[
             Container(
               height: Adapt.px(120),
-                child: _stuStateItem(stu_img, stu_name,state),
+                child: _stuStateItem(stu_name,state),
             ),
           ],
         )
     );
   }
 
-  Widget _stuStateItem(String stuImg,String stuName, Widget stuState){
+  Widget _stuStateItem(String stuName, Widget stuState){
 
     return Card(
       elevation: 2,
@@ -45,20 +43,6 @@ class RollCallItem extends StatelessWidget {
         children: <Widget>[
           Padding(
             padding: EdgeInsets.only(left: 15),
-          ),
-          Expanded(
-            flex: 1,
-            child: Container(
-              width: Adapt.px(80),
-              height: Adapt.px(80),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                image: DecorationImage(
-                  fit: BoxFit.cover,
-                  image: NetworkImage(stuImg),
-                ),
-              ),
-            ),
           ),
           Padding(
             padding: EdgeInsets.only(left: 15),
@@ -74,7 +58,6 @@ class RollCallItem extends StatelessWidget {
             flex: 2,
             child: stuState,
           ),
-
           Expanded(
             flex: 1,
             child: Container(

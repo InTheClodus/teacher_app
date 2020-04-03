@@ -1,15 +1,12 @@
+import 'package:bubble_tab_indicator/bubble_tab_indicator.dart';
 import 'package:date_format/date_format.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:radial_button/widget/circle_floating_button.dart';
 import 'package:teacher_app/module/StudentSign.dart';
-import 'package:teacher_app/module/growup_model.dart';
-import 'package:teacher_app/page/Index/updatePage.dart';
-import 'package:teacher_app/page/public_widget/custom_chart_paint.dart';
 import 'package:parse_server_sdk/parse_server_sdk.dart';
 import 'package:teacher_app/util/SizeConfig.dart';
-
-import 'widget/rowItem.dart';
+import 'package:teacher_app/widget/calendarshow/simple_gesture_detector.dart';
+import 'package:toast/toast.dart';
 
 /*
 * 成長紀錄
@@ -24,363 +21,312 @@ class GrowUp extends StatefulWidget {
   _GrowUpState createState() => _GrowUpState();
 }
 
-class _GrowUpState extends State<GrowUp> {
-  List<StudentSign> _listStudentSign = [];
-  int _selectedColorIndex = 0;
-  String stuName = '未選擇';
-  String stuHei = '170';
-  String stuWid = '100';
-  String userObj;
-  final userName = TextEditingController();
-  final userheight = TextEditingController();
-  final bodyWeight = TextEditingController();
+class _GrowUpState extends State<GrowUp> with SingleTickerProviderStateMixin {
+  List<StudentSign> _listSignData = [];
+  var student = ParseObject("Student"); //學生的對象
+  var employee = ParseObject("Employee");
+  bool isExpanded = false;
+  int i=0;//標記默認選中身高
+  final TextEditingController _txtBH = TextEditingController();
+  final TextEditingController _txtBW = TextEditingController();
 
-  List<String> _stuList = [];
-  List<int> list = [0, 1, 2, 3, 4, 5];
-  List<Item> _data = generateItems(8);
+  final List<Tab> tabs = <Tab>[
+    new Tab(text: "身高"),
+    new Tab(text: "體重"),
+  ];
+  TabController _tabController;
 
-  List<Widget> itemsActionBar;
-  GlobalKey<CircleFloatingButtonState> key01 =
-      GlobalKey<CircleFloatingButtonState>();
-
-  fechar() {
-    key01.currentState.close();
-  }
-
-//  获取全部学生信息
-  Future<void> _stuInfo() async {
-    var rep = await ParseObject('Student').getAll();
-    if (rep.success) {
-      for (var data in rep.result) {
-        QueryBuilder queryStu = QueryBuilder<ParseObject>(ParseObject('Member'))
-          ..whereEqualTo('objectId', data['member']['objectId']);
-        var repquery = await queryStu.query();
-        if (repquery.success) {
-          setState(() {
-            for (var m_stu in repquery.result) {
-              _stuList.add(m_stu['displayName']);
-              _listStudentSign
-                  .add(StudentSign(data['objectId'], m_stu['displayName']));
-            }
-            print(data['objectId']);
-          });
-        }
-      }
-    }
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    super.dispose();
   }
 
 //  获得学生对应的成长数据
-  Future<void> _getStudentSign(String id) async {
-    QueryBuilder stuQuery = QueryBuilder<ParseObject>(ParseObject('Student'))
-      ..whereEqualTo('objectId', id);
-    var response = await stuQuery.query();
-    print(response.result);
-    if (response.success) {
-      for (var data in response.result) {
-        QueryBuilder stuSign =
-            QueryBuilder<ParseObject>(ParseObject('StudentSign'))
-              ..whereEqualTo('student', data);
-        var repsign = await stuSign.query();
-        if (repsign.success) {
+  Future<void> _getStudentSign(num i) async {
+    var empId;
+    var branchId;
+    final user = await ParseUser.currentUser() as ParseUser;
+    if (user != null) {
+      QueryBuilder<ParseObject> querUser =
+          QueryBuilder<ParseObject>(ParseObject('_User'))
+            ..whereEqualTo('objectId', user.objectId)
+            ..includeObject([
+              'employee',
+            ]);
+      var repuser = await querUser.query();
+      if (repuser.result != null) {
+        repuser.result.map((map) {
           setState(() {
-            for (var datas in repsign.result) {
-              if (datas['type'] == 'BH') {
-                _listHei.add(double.parse(datas['value'].toString()));
-                _listDate.add(formatDate(datas['createdAt'], [mm, '-', dd]));
-              } else if (datas['type'] == 'BW') {
-                _listBodyWig.add(double.parse(datas['value'].toString()));
-              }
-            }
+            empId = map['employee']['objectId'];
           });
+        }).toList();
+        QueryBuilder<ParseObject> queryEmp =
+            QueryBuilder<ParseObject>(ParseObject('Employee'))
+              ..whereEqualTo('objectId', empId)
+              ..includeObject(['branch']);
+        var repEmp = await queryEmp.query();
+        if (repEmp.result != null) {
+          repEmp.result.map((map) {
+            setState(() {
+              branchId = map['branch']['objectId'];
+              print("-----------");
+              print(map['branch']['objectId']);
+            });
+          }).toList();
+        }
+
+//        查詢所有學生姓名
+        QueryBuilder<ParseObject> queryAllStuName =
+            QueryBuilder<ParseObject>(ParseObject('Student'))
+              ..whereRelatedTo('students', 'Branch', branchId) //查詢的學生信息是與Branch表的students字段相關對應的BranchObjectId
+              ..includeObject(['member']); //包含會員對象
+        var repAllstuName = await queryAllStuName.query();
+        if (repAllstuName.result != null) {
+          print('會員對象不為空');
+          for (var stuData in repAllstuName.result) {
+            setState(() {
+              student.set("objectId", stuData['objectId']);
+              student.save();
+            });
+            QueryBuilder queryStuSign = QueryBuilder(ParseObject("StudentSign"))
+              ..whereEqualTo('student', student)
+              ..whereEqualTo('type', i==0?'BH':'BW')
+              ..includeObject(['student', 'input']);
+            print(empId);
+            var rep = await queryStuSign.query();
+            if (rep.result != null) {
+              for (var dataSign in rep.result) {
+                print(dataSign["input"]["displayName"]);
+                setState(() {
+                  _listSignData.add(StudentSign(
+                      stuobjectId: stuData['objectId'],
+                      stuName: stuData['member']['displayName'],
+                      type: dataSign['type'],
+                      BHandW:dataSign['value'].toString(),
+                      updateAt: dataSign['updatedAt'],
+                      empobjectId: dataSign["input"]["objectId"]));
+                });
+              }
+              setState(() {
+                _listSignData
+                    .sort((a, b) => (a.updateAt).compareTo(b.updateAt));
+              });
+            }
+//        var emp=ParseObject("Employee");
+//        emp.set("objectId", empId);
+//        emp.save();
+//        for (int i = 0; i <_listSignData.length; i++) {
+//          var student=ParseObject("Student");
+//          student.set("objectId", _listSignData[i].stuobjectId);
+//          student.save();
+//          var sign = ParseObject("StudentSign")
+//            ..set("student", student)
+//            ..set("type", "BW")
+//            ..set("value", 170)
+//            ..set('input', emp);
+//          var r=await sign.save();
+//          if(r.statusCode==201){
+//            print('插入成功');
+//          }
+//        }
+          }
         }
       }
     }
   }
 
-  List<double> _listHei = []; //身高数据
-  List<String> _listDate = [];
-  List<double> _listBodyWig = []; //体重数据
+  Future<void> addStudentBAndW(stuId,empId) async {
+    for(int i=0;i<2;i++){
+      student.set("objectId", stuId);
+      employee.set('objectId', empId);
+      student.save();
+      employee.save();
+      var sign = ParseObject("StudentSign")
+        ..set("student", student)
+        ..set("input", employee)
+        ..set("type", i==0?"BH":"BW")
+        ..set("value", i==0?double.parse(_txtBH.text):double.parse(_txtBW.text));
+      var rep = await sign.save();
+      if (rep.statusCode == 201) {
+        _getStudentSign(i);
+        Toast.show("添加成功", context, duration: Toast.LENGTH_SHORT, gravity:  Toast.BOTTOM);
+      }else if(rep.statusCode==111){
+        Toast.show("數據格式錯誤，請檢查", context, duration: Toast.LENGTH_SHORT, gravity:  Toast.BOTTOM);
+      }
+    }
+  }
 
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-    itemsActionBar = [
-      FloatingActionButton(
-        heroTag: UniqueKey(),
-        backgroundColor: Colors.greenAccent,
-        onPressed: () {
-          fechar();
-          for (int i = 0; i <= _data.length; i++) {
-            setState(() {
-              _data[i].isExpanded = true;
-            });
-          }
-        },
-        child: Text(
-          '展開\n全部',
-        ),
-      ),
-      FloatingActionButton(
-        heroTag: UniqueKey(),
-        backgroundColor: Colors.orangeAccent,
-        onPressed: () {
-          fechar();
-          for (int i = 0; i <= _data.length; i++) {
-            setState(() {
-              _data[i].isExpanded = false;
-            });
-          }
-        },
-        child: Text('折疊\n全部'),
-      ),
-    ];
-    _stuInfo();
+    _getStudentSign(i);
+    _tabController = new TabController(vsync: this, length: tabs.length);
+  }
+//  右滑動
+  void _onSwipeRight() {
+    if (isExpanded) {
+      print("右滑動");
+    }
   }
 
+//左滑動
+  void _onSwipeLeft() {
+    if (isExpanded) {
+      print("左滑動");
+    }
+
+  }
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     SizeConfig().init(context);
     return Scaffold(
-      appBar: PreferredSize(
-        child: Stack(
-          children: <Widget>[
-            Container(
-              padding: EdgeInsets.only(left: 10, top: 10),
-              width: double.infinity,
-              height: 96,
-              decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                      colors: [Color(0xffc7d6eb), Color(0xffc7d6eb)]),
-                  borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(25),
-                      bottomRight: Radius.circular(25))),
-            ),
-            Container(
-              padding: EdgeInsets.only(left: 10),
-              width: double.infinity,
-              height: 90,
-              decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                      colors: [Color(0xff2d7fc7), Color(0xff2d7fc7)]),
-                  borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(25),
-                      bottomRight: Radius.circular(25))),
-              child: SafeArea(
-                  child: Stack(
-                children: <Widget>[
-                  IconButton(
-                    color: Color(0xffffffff),
-                    icon: Icon(Icons.arrow_back),
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    iconSize: 30,
-                  ),
-                  Center(
-                    child: Text(
-                      "成長紀錄",
-                      style: TextStyle(
-                          color: Color(0xffffffff),
-                          fontSize: 20,
-                          fontWeight: FontWeight.w500),
-                      textAlign: TextAlign.center,
-                    ),
-                  )
-                ],
-              )),
-            ),
-          ],
-        ),
-        preferredSize: Size(double.infinity, 90),
-      ),
-      body: SingleChildScrollView(
-        child: Container(
-          child: _buildPanel(width),
-        ),
-      ),
-      floatingActionButton: CircleFloatingButton.floatingActionButton(
-        key: key01,
-        items: itemsActionBar,
-        color: Colors.greenAccent,
-        icon: Icons.add,
-        duration: Duration(milliseconds: 1000),
-        curveAnim: Curves.ease,
-      ),
-    );
-  }
-
-  Widget _buildPanel(width) {
-    final textTheme = Theme.of(context).textTheme;
-    return ExpansionPanelList(
-      expansionCallback: (int index, bool isExpanded) {
-        setState(() {
-          _data[index].isExpanded = !isExpanded;
-        });
-      },
-      children: _data.map<ExpansionPanel>((Item item) {
-        return ExpansionPanel(
-          headerBuilder: (BuildContext context, bool isExpanded) {
-            return ListTile(
-              title: Row(
-                children: <Widget>[
-                  Expanded(
-                    flex: 2,
-                    child: AspectRatio(
-                        aspectRatio: 1 / 1,
-                        child: Container(
-                          height: SizeConfig.blockSizeHorizontal * 10,
-                          width: SizeConfig.blockSizeHorizontal * 10,
-                          child: CircleAvatar(
-                            radius: 50,
-                            backgroundImage: NetworkImage(
-                                'https://upload.jianshu.io/users/upload_avatars/2958544/02ddb7097fbe?imageMogr2/auto-orient/strip|imageView2/1/w/240/h/240'),
-                          ),
-                        )),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.only(left: 15),
-                  ),
-                  Expanded(
-                    flex: 8,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          '姓名',
-                          style: textTheme.title,
-                        ),
-                        Text(
-                          "CT1003",
-                          style: textTheme.caption,
-                        )
-                      ],
-                    ),
-                  )
-                ],
-              ),
-            );
-          },
-          body: Container(
-            color: Color(0xfff5f5f5),
-            width: width,
-            padding: EdgeInsets.all(10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  '身高：159.0 CM',
-                  style: TextStyle(color: Color(0xffa3a3a3)),
-                ),
-                Text(
-                  '體重：50.0 KG',
-                  style: TextStyle(color: Color(0xffa3a3a3)),
-                ),
-                Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: Text(
-                        '最後紀錄時間：2020-03-26',
-                        style: TextStyle(color: Color(0xffa3a3a3)),
-                      ),
-                    ),
-                    Expanded(
-                      child: FlatButton(
-                        child: Text(
-                          "新增紀錄",
-                          style: TextStyle(color: Colors.blue),
-                        ),
-                        onPressed: () {
-                          print('新增紀錄');
-                        },
-                      ),
-                    ),
-                  ],
-                )
-              ],
-            ),
+        appBar: new AppBar(
+          title: Text(
+            '成長紀錄',
+            style: TextStyle(color: Colors.white),
           ),
-          isExpanded: item.isExpanded,
-        );
-      }).toList(),
-    );
+          centerTitle: true,
+          backgroundColor: Color(0xff2d7fc7),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(20))),
+          bottom: new TabBar(
+            isScrollable: true,
+            unselectedLabelColor: Color(0xfff5f5f5),
+            labelColor: Colors.white,
+            indicatorSize: TabBarIndicatorSize.tab,
+            indicator: new BubbleTabIndicator(
+              indicatorHeight: 25.0,
+              indicatorColor: Color(0xffffc82c),
+              tabBarIndicatorSize: TabBarIndicatorSize.tab,
+            ),
+            tabs: tabs,
+            controller: _tabController,
+
+            onTap: (f){
+              setState(() {
+                i=f;
+                _listSignData.clear();
+                _getStudentSign(i);
+              });
+            },
+          ),
+        ),
+        body: SimpleGestureDetector(
+          onSwipeLeft: _onSwipeLeft,
+          onSwipeRight: _onSwipeRight,
+          swipeConfig: SimpleSwipeConfig(
+            verticalThreshold: 10.0,
+            horizontalThreshold: 40.0,
+            swipeDetectionMoment: SwipeDetectionMoment.onUpdate,
+          ),
+          child: TabBarView(
+            physics: new NeverScrollableScrollPhysics(),
+            controller: _tabController,
+            children: <Widget>[
+              GrowupWidget('身高'),
+              GrowupWidget('體重'),
+            ],
+          ),
+        ));
   }
 
-  //region 底部彈出框
+  Widget GrowupWidget(title) {
 
-  void showPub() {
-    showModalBottomSheet(
-        context: context,
-        builder: (BuildContext context) {
-          return _shareWidget();
-        });
-  }
-
-  Widget _shareWidget() {
-    final width = MediaQuery.of(context).size.width;
-    final FixedExtentScrollController scrollController =
-        FixedExtentScrollController(initialItem: _selectedColorIndex);
-    return new Container(
-      height: 200.0,
-      child: new Column(
+    return Container(
+      child: ListView(
         children: <Widget>[
-          Container(
-            width: width * 0.92,
-          ),
-          new Padding(
-            padding: EdgeInsets.fromLTRB(0.0, 10.0, 0.0, 0.0),
-            child: new Container(
-              height: 190.0,
-              child: new CupertinoPicker(
-                magnification: 1.0,
-                scrollController: scrollController,
-                itemExtent: 35,
-                backgroundColor: CupertinoColors.white,
-                useMagnifier: true,
-                onSelectedItemChanged: (index) {
-                  setState(() {
-                    _listDate.clear();
-                    _listBodyWig.clear();
-                    _listHei.clear();
-                    stuName = _listStudentSign[index].userName;
-                    _getStudentSign(_listStudentSign[index].objectId);
-                    print(stuName);
-                    print(_listStudentSign[index].objectId);
-                  });
-                },
-                children: List<Widget>.generate(_stuList.length, (int index) {
-                  return Center(
-                    child: Text(_stuList[index]),
-                  );
-                }),
-              ),
-            ),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+                columns: [
+                  DataColumn(label: Text("姓名")),
+                  DataColumn(label: Text(title)),
+                  DataColumn(label: Text('操作')),
+                  DataColumn(label: Text('日期'))
+                ],
+                rows: _listSignData.map((post) {
+                  return DataRow(cells: [
+                    DataCell(Text(post.stuName)),
+                    DataCell(Text(post.BHandW)),
+                    DataCell(FlatButton(
+                      onPressed: () {
+                        showCupertinoDialog(
+                            context: context,
+                            builder: (context) {
+                              return CupertinoAlertDialog(
+                                title: Text('新增${post.stuName}紀錄'),
+                                content: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    Padding(
+                                      padding:
+                                          EdgeInsets.only(top: 8, bottom: 8),
+                                      child: Text("身高"),
+                                    ),
+                                    CupertinoTextField(
+                                      controller: _txtBH,
+                                    ),
+                                    Padding(
+                                      padding:
+                                          EdgeInsets.only(top: 8, bottom: 8),
+                                      child: Text("體重"),
+                                    ),
+                                    CupertinoTextField(
+                                      controller: _txtBW,
+                                    ),
+                                  ],
+                                ),
+                                actions: <Widget>[
+                                  CupertinoDialogAction(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                    },
+                                    child: Text('取消'),
+                                  ),
+                                  CupertinoDialogAction(
+                                    onPressed: () {
+                                      addStudentBAndW(post.stuobjectId,post.empobjectId);
+                                      Navigator.pop(context);
+                                      print(_txtBW.text);
+                                    },
+                                    child: Text('确定'),
+                                  ),
+                                ],
+                              );
+                            });
+                      },
+                      child: Text(
+                        "新增",
+                        style: TextStyle(color: Colors.blue),
+                      ),
+                    )),
+                    DataCell(Text(
+                        formatDate(post.updateAt, [yyyy, '-', mm, '-', dd])))
+                  ]);
+                }).toList()),
           ),
         ],
       ),
     );
   }
-//endregion
 }
 
-class Item {
-  Item({
-    this.expandedValue,
-    this.headerValue,
-    this.isExpanded = false,
-  });
+class StudentSign {
+  final Object stuobjectId;
+  final String stuName;
+  final String BHandW;
+  final DateTime updateAt;
+  final String type;
+  final Object empobjectId;
 
-  String expandedValue;
-  String headerValue;
-  bool isExpanded;
-}
-
-List<Item> generateItems(int numberOfItems) {
-  return List.generate(numberOfItems, (int index) {
-    return Item(
-      headerValue: 'Panel $index',
-      expandedValue: 'This is item number $index',
-    );
-  });
+  const StudentSign(
+      {this.stuobjectId,
+      this.stuName,
+      this.BHandW,
+      this.updateAt,
+      this.type,
+      this.empobjectId});
 }

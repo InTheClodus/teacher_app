@@ -11,7 +11,7 @@ class DecisionPage extends StatefulWidget {
 }
 
 class _DecisionPageState extends State<DecisionPage> {
-  String _parseServerState = 'Checking Parse Server...';
+  String _parseServerState = '正在检查解析服务器...';
 
   @override
   void initState() {
@@ -30,7 +30,6 @@ class _DecisionPageState extends State<DecisionPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
-              _showLogo(),
               const SizedBox(
                 height: 20,
               ),
@@ -39,20 +38,6 @@ class _DecisionPageState extends State<DecisionPage> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _showLogo() {
-    return Hero(
-      tag: 'hero',
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(0.0, 70.0, 0.0, 0.0),
-        child: CircleAvatar(
-          backgroundColor: Colors.transparent,
-          radius: 48.0,
-          child: Image.asset('assets/parse.png'),
         ),
       ),
     );
@@ -71,9 +56,10 @@ class _DecisionPageState extends State<DecisionPage> {
           _redirectToPage(context, Login());
         }
       } else {
+        _redirectToPage(context, Login());
         setState(() {
           _parseServerState =
-          'Parse Server Not avaiable\n due to ${response.error.toString()}';
+          '解析服务器不可用\n 由于 ${response.error.toString()}';
         });
       }
     } catch (e) {

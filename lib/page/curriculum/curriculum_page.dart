@@ -70,14 +70,13 @@ class _CurriculumPageState extends State<CurriculumPage> {
         }).toList();
       }
       if (istea == true) {
-        print("當前身分是老師");
+        print("當前身份是老師");
         QueryBuilder quercourseIsmy = QueryBuilder(ParseObject('CourseLesson'))
           ..whereEqualTo('teacher', tea)
           ..includeObject(['location']);
         var rep = await quercourseIsmy.query();
         if (rep.success) {
           for (var data in rep.result) {
-            print(data['teacher']['displayName']);
             if (formatDate(data['date'], [yyyy, '-', mm, '-', dd]) ==
                 formatDate(DateTime.now(), [yyyy, '-', mm, '-', dd])) {
               QueryBuilder queraddres = QueryBuilder(ParseObject('BranchRoom'))
@@ -349,7 +348,7 @@ class _CurriculumPageState extends State<CurriculumPage> {
         position:
             i % 2 == 0 ? TimelineItemPosition.right : TimelineItemPosition.left,
         isFirst: i == 0,
-        isLast: i == doodles.length,
+        isLast: i == _listDoodle.length,
         iconBackground: doodle.iconBackground,
         icon: doodle.icon);
   }

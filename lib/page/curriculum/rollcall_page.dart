@@ -3,10 +3,10 @@ import 'package:cool_ui/cool_ui.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-import 'package:teacher_app/module/studentStatus.dart';
+import 'package:teacher_app/util/SizeConfig.dart';
+import 'package:teacher_app/util/stu_attend_state.dart';
 import 'package:teacher_app/widget/contact_item.dart';
 import 'package:parse_server_sdk/parse_server_sdk.dart';
-import 'package:toast/toast.dart';
 import 'Item/rollcallItem.dart';
 
 /*
@@ -20,7 +20,8 @@ class RollCallPage extends StatefulWidget {
   final DateTime clssTime;
   final String adderss;
 
-  const RollCallPage({Key key, this.className, this.clssTime, this.adderss}) : super(key: key);
+  const RollCallPage({Key key, this.className, this.clssTime, this.adderss})
+      : super(key: key);
 
   @override
   _RollCallPageState createState() => _RollCallPageState();
@@ -34,63 +35,35 @@ class _RollCallPageState extends State<RollCallPage> {
   int allStu = 0;
   String url;
   String teaName;
+  String teaObejctId;
   String sk = "即將到達上課時間";
+  var course = ParseObject("CourseClass");
+  var lesson = ParseObject("CourseLesson");
+  var scholar = ParseObject("Scholar");
+  var member = ParseObject("Member");
+  var branch = ParseObject("Branch");
+  var teacher = ParseObject("Teacher");
+  List<String> _listMember = [];
+  List<String> _listScholarId = [];
+  var CourseobejectId;
 
-  List<String> Item = <String>[
-    '出席',
-    '遲到',
-    '請假',
-    '缺席',
-  ];
-
-//  获取学生状态信息
-  List<StudentStatus> _listStudentstatus = [];
-
-  Future<void> _getStuStatus() async {
-    var response = await ParseObject('StudentStatus').getAll();
-    if (response.success) {
-      setState(() {
-        _listStudentstatus.clear();
-        for (var data in response.result) {
-          _listStudentstatus.add(StudentStatus(data['objectId'],
-              data['stuName'], data['stuStatus'], data['curriculum']));
-        }
-        allStu = response.count;
-      });
-    }
-  }
-
-
-//  修改
-//  Future<void> _update_stuStatu(String Id, String status) async {
-//    var statusparse = ParseObject('StudentStatus')
-//      ..set('objectId', Id)
-//      ..set('stuStatus', status);
-//    var response = await statusparse.save();
-//    if (response.success) {
-//      setState(() {
-//        _getStuStatus();
-//        Toast.show('签到成功${status}', context,
-//            duration: Toast.LENGTH_SHORT, gravity: Toast.BOTTOM);
-//      });
-//      _getStuStatus();
-//      _getChuXi();
-//    }
-//    print('--------------------');
-//  }
+  List<StuAttendance> _listStuAttendance = [];
 
   //region count
-  Future<void> _getChuXi() async {
-    QueryBuilder<ParseObject> queryChuXi =
-        QueryBuilder<ParseObject>(ParseObject('StudentStatus'))
-          ..whereEqualTo('stuStatus', '出席');
-    var response = await queryChuXi.count();
-    if (response.success && response.result != null) {
-      setState(() {
-        chuxi = response.count;
-      });
+  Future<void> _addStudentToScholar(objectId, value) async {
+    print("${objectId}   ${value}");
+    scholar.set('objectId', objectId);
+    var attendance = ParseObject("CourseAttendance")
+      ..set('class', course)
+      ..set('lesson', lesson)
+      ..set('scholar', scholar)
+      ..set('status', StuAttendState.LabelToStatus(value));
+    var repatend = await attendance.save();
+    if (repatend.statusCode == 201) {
+      print('插入成功');
     }
   }
+
   //endregion
 
   @override
@@ -98,37 +71,175 @@ class _RollCallPageState extends State<RollCallPage> {
     // TODO: implement initState
     super.initState();
     _getCourseImg();
-    _getTeaname();
+    _getStuCont();
   }
 
-  Future<void> _getCourseImg()async{
-    QueryBuilder queryimg=QueryBuilder(ParseObject("CourseClass"))
-        ..whereEqualTo('title', widget.className)
-        ..includeObject(['course']);
-    var rep=await queryimg.query();
-    if(rep.success){
-      rep.result.map((map){
+  Future<void> _getCourseImg() async {
+    QueryBuilder queryimg = QueryBuilder(ParseObject("CourseClass"))
+      ..whereEqualTo('title', widget.className)
+      ..includeObject(['course']);
+    var rep = await queryimg.query();
+    if (rep.success) {
+      rep.result.map((map) {
         setState(() {
-          print(map['course']['cover']['url']);
-          url=map['course']['cover']['url'];
+          url = map['course']['cover']['url'];
+          course.set('objectId', map['objectid']);
         });
       }).toList();
     }
   }
-  Future<void>_getTeaname()async{
-    final ParseUser user = await ParseUser.currentUser() as ParseUser;
-    QueryBuilder queryTea=QueryBuilder(ParseObject("_User"))
-      ..whereEqualTo('objectId', user.objectId)
-      ..includeObject(['teacher']);
-    var rep=await queryTea.query();
-    if(rep.success){
-      for(var data in rep.result){
+
+  Future<void> _getStuCont() async {
+//      先查询当前上课的是哪个班级
+    var location;
+    var objectIdBranch;
+    print(widget.className);
+    //region 頂部Card內容
+    QueryBuilder queryCourseTitle = QueryBuilder(ParseObject("CourseLesson"))
+      ..whereEqualTo('title', widget.className)
+      ..includeObject(['location', 'class', 'teacher']);
+    var rep = await queryCourseTitle.query();
+    print(rep.result);
+    if (rep.result != null) {
+      rep.result.map((map) {
         setState(() {
-          teaName=data['teacher']['displayName'];
+          CourseobejectId = map['objectId'];
+          location = map['location']['objectId'];
+          teaName = map['teacher']['displayName'];
+          lesson.set('objectId', map['objectId']);
+          course.set("objectId", map["class"]["objectId"]);
         });
+      }).toList();
+//  查詢CourseLesson表的location字段
+//  通過字段location指向的BranchRoom表
+//  查詢該表的branch以方便獲得學生的數據
+//  在branch字段指向的Branch表有字段students
+//  該表紀錄著登錄的教師所在班級的所有學生
+//    因為不能在上一層直接include下一層，所有先查詢分校objectId，再進一步查詢
+      QueryBuilder queryBranchRoom = QueryBuilder(ParseObject("BranchRoom"))
+        ..whereEqualTo('objectId', location)
+        ..includeObject(['branch']);
+      var queryRoom = await queryBranchRoom.query();
+      if (queryRoom.result != null) {
+        print('當查詢BranchRoom不為空');
+//      查詢這個分校的這個課程的學生
+        QueryBuilder queryBranchRoom =
+            QueryBuilder<ParseObject>(ParseObject('Student'))
+              ..whereRelatedTo('students', 'Branch',
+                  queryRoom.results.first['branch']['objectId'])
+              ..includeObject(['member']);
+        var repStu = await queryBranchRoom.query();
+        if (repStu.statusCode == 200) {
+          print("Student查詢成功");
+          if (repStu.result != null) {
+//          當查詢學生是否為會員不為空時
+            print('當查詢學生是否為會員不為空時');
+//        將所有學生的會員信息添加到  _listMember列表中,方便用於在學員表中添加
+            setState(() {
+              allStu = repStu.count;
+            });
+            for (var dataStu in repStu.result) {
+              _listMember.add(dataStu['member']['objectId']);
+              print(dataStu['member']['objectId']);
+              print(repStu.count);
+              //region Scholar表
+//            將_listMember中的id放入Scholar表中查找，如果不存在就添加進去
+              member.set("objectId", dataStu['member']['objectId']);
+              branch.set(
+                  'objectId', queryRoom.results.first['branch']['objectId']);
+              QueryBuilder queryScholar =
+                  QueryBuilder<ParseObject>(ParseObject("Scholar"))
+                    ..whereEqualTo('branch', branch)
+                    ..whereEqualTo('member', member);
+              var repScholar = await queryScholar.query();
+              if (repScholar.success) {
+                if (repScholar.result != null) {
+//              當學生存在學員列表
+                  print("當學生存在學員列表");
+                  for (var datasc in repScholar.result) {
+                    setState(() {
+                      _listScholarId.add(datasc['objectId']);
+                    });
+                    scholar.set('objectId', "X1ACR0LoBp");
+                    QueryBuilder queryAttendance = QueryBuilder<ParseObject>(
+                        ParseObject('CourseAttendance'))
+                      ..whereEqualTo('class', course)
+                      ..whereEqualTo('lesson', lesson)
+                      ..whereEqualTo('scholar', scholar);
+                    var rep = await queryAttendance.query();
+
+                      print('簽到表查詢成功${_listStuAttendance.length}');
+                      if (rep.result != null) {
+                        for(var repdata in rep.result){
+                          setState(() {
+                            _listStuAttendance.add(StuAttendance(
+                                objectId: repdata['objectId'],
+                                name: repdata['objectId'],
+                                state: StuAttendState.statusToLabel(
+                                    repdata['state'])));
+                          });
+                        }
+                      } else {
+                        print('---------------簽到表沒有這個人');
+//                        course.set('objectId', "zwRFCi4Aed");
+//                        lesson.set('objectId', "xjJG3g86lL");
+//                        scholar.set('objectId', "jPJgNdfGhz");
+                        print("_____________${course.objectId}");
+                        print("_____________${lesson.objectId}");
+                        var attendance = ParseObject("CourseAttendance")
+                          ..set('class', course)
+                          ..set('lesson', lesson)
+                          ..set('scholar', scholar)
+                          ..set('status', StuAttendState.LabelToStatus("未點名"));
+                        var repatend = await attendance.save();
+                        if (repatend.statusCode == 201) {
+                          print('插入成功');
+                        } else {
+                          print(repatend.statusCode);
+                        }
+                      }
+
+                  }
+                } else {
+//              當學生不存在學員表，則添加
+                  print('該學生不處於學員列表');
+                  print(member);
+                  print(branch);
+                  var addScholar = ParseObject("Scholar")
+                    ..set("branch", branch)
+                    ..set("member", member);
+                  var repmember = await addScholar.save();
+                  if (repmember.statusCode==201) {
+                    print('插入成功');
+                  }
+                }
+              }
+              //endregion
+            }
+          }
+        }
       }
     }
+    //endregion
   }
+
+  Future<void> add() async {
+    course.set('objectId', "zwRFCi4Aed");
+    lesson.set('objectId', "xjJG3g86lL");
+    scholar.set('objectId', "jPJgNdfGhz");
+    var attendance = ParseObject("CourseAttendance")
+      ..set('class', course)
+      ..set('lesson', lesson)
+      ..set('scholar', scholar)
+      ..set('status', StuAttendState.LabelToStatus("未點名"));
+    var repatend = await attendance.save();
+    if (repatend.statusCode == 201) {
+      print('插入成功');
+    } else {
+      print(repatend.statusCode);
+    }
+  }
+
   @override
   void dispose() {
     // TODO: implement dispose
@@ -137,8 +248,7 @@ class _RollCallPageState extends State<RollCallPage> {
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    final height = MediaQuery.of(context).size.height;
+    SizeConfig().init(context);
     return Scaffold(
         appBar: PreferredSize(
           child: Stack(
@@ -219,13 +329,15 @@ class _RollCallPageState extends State<RollCallPage> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: <Widget>[
                             Container(
-                                width: 130,
+                                width: 150,
                                 height: 150,
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(5.0),
                                   child: ClipRRect(
                                     child: Image.network(
-                                      url!=null?url:'https://macauscholar.uat.macau520.com:8443/api/files/macauscholar/e1df8f6a424b8778253b0526ae558d16_course2.jpg',
+                                      url != null
+                                          ? url
+                                          : 'https://macauscholar.uat.macau520.com:8443/api/files/macauscholar/e1df8f6a424b8778253b0526ae558d16_course2.jpg',
                                       fit: BoxFit.cover,
                                     ),
                                     borderRadius: BorderRadius.circular(10),
@@ -267,12 +379,14 @@ class _RollCallPageState extends State<RollCallPage> {
                                       ),
                                       Expanded(
                                         child: Text(
-                                          widget.adderss==null?'澳門水灣坑':widget.adderss,
+                                          widget.adderss == null
+                                              ? '澳門水灣坑'
+                                              : widget.adderss,
                                           softWrap: true,
                                           overflow: TextOverflow.ellipsis,
                                           maxLines: 3,
-                                          style:
-                                          TextStyle(color: Color(0xffb5b8c2)),
+                                          style: TextStyle(
+                                              color: Color(0xffb5b8c2)),
                                         ),
                                       )
                                     ],
@@ -288,7 +402,7 @@ class _RollCallPageState extends State<RollCallPage> {
                                         width: 10,
                                       ),
                                       Text(
-                                        '20人',
+                                        allStu.toString(),
                                         style:
                                             TextStyle(color: Color(0xffb5b8c2)),
                                       )
@@ -305,7 +419,7 @@ class _RollCallPageState extends State<RollCallPage> {
                                         width: 10,
                                       ),
                                       Text(
-                                        teaName!=null?teaName:'李長安',
+                                        teaName != null ? teaName : '李長安',
                                         style:
                                             TextStyle(color: Color(0xffb5b8c2)),
                                       )
@@ -335,6 +449,7 @@ class _RollCallPageState extends State<RollCallPage> {
                       new ContactItem(
                         count: chuxi.toString(),
                         title: '出席',
+                        onPressed: () => add(),
                       ),
                       new ContactItem(
                         count: qingjia.toString(),
@@ -353,23 +468,18 @@ class _RollCallPageState extends State<RollCallPage> {
                 ),
               ),
               //endregion
-
-              Padding(
-                padding: EdgeInsets.only(top: 10),
-              ),
-
-              Padding(
-                padding: EdgeInsets.only(top: 10),
-              ),
-
-              SingleChildScrollView(
-                child: Column(
-                  children: <Widget>[
-                    RollCallItem(
-                        'https://upload.jianshu.io/users/upload_avatars/2958544/02ddb7097fbe?imageMogr2/auto-orient/strip|imageView2/1/w/240/h/240',
-                        '张三',
-                      _buildPopoverButton("未签到"),)
-                  ],
+              Container(
+                height: 500,
+                child: ListView.builder(
+                  itemBuilder: (BuildContext context, int index) {
+                    return RollCallItem(
+                        _listStuAttendance[index].name,
+                        _buildPopoverButton(
+                          _listStuAttendance[index].state,
+                          _listStuAttendance[index].objectId,
+                        ));
+                  },
+                  itemCount: _listStuAttendance.length,
                 ),
               )
             ],
@@ -377,8 +487,9 @@ class _RollCallPageState extends State<RollCallPage> {
         ));
   }
 
-  Widget _buildPopoverButton(String btnTitle) {
+  Widget _buildPopoverButton(String btnTitle, objectId) {
     return CupertinoPopoverButton(
+        popoverHeight: 160,
         child: Container(
           decoration: BoxDecoration(
               color: Colors.transparent,
@@ -388,9 +499,9 @@ class _RollCallPageState extends State<RollCallPage> {
               ]),
           child: Center(
               child: Text(
-                btnTitle,
-                style: TextStyle(color: Colors.blue, fontSize: 18),
-              )),
+            btnTitle,
+            style: TextStyle(color: Colors.blue, fontSize: 18),
+          )),
         ),
         popoverBuild: (context) {
 //              return Text("satatastas");
@@ -401,6 +512,7 @@ class _RollCallPageState extends State<RollCallPage> {
                 child: Text("出席"),
                 onTap: () {
                   print('出席');
+                  _addStudentToScholar(objectId, '出席');
                   Navigator.pop(context);
                   return true;
                 },
@@ -410,6 +522,7 @@ class _RollCallPageState extends State<RollCallPage> {
                 child: Text("遲到"),
                 onTap: () {
                   print('遲到');
+                  _addStudentToScholar(objectId, '遲到');
                   Navigator.pop(context);
                   return true;
                 },
@@ -419,6 +532,7 @@ class _RollCallPageState extends State<RollCallPage> {
                 child: Text("早退"),
                 onTap: () {
                   print('早退');
+                  _addStudentToScholar(objectId, '早退');
                   Navigator.pop(context);
                   return true;
                 },
@@ -428,6 +542,17 @@ class _RollCallPageState extends State<RollCallPage> {
                 child: Text("請假"),
                 onTap: () {
                   print('請假');
+                  _addStudentToScholar(objectId, '請假');
+                  Navigator.pop(context);
+                  return true;
+                },
+              ),
+              CupertinoPopoverMenuItem(
+                leading: Icon(Icons.edit),
+                child: Text("缺席"),
+                onTap: () {
+                  print('缺席');
+                  _addStudentToScholar(objectId, '缺席');
                   Navigator.pop(context);
                   return true;
                 },
@@ -436,90 +561,12 @@ class _RollCallPageState extends State<RollCallPage> {
           );
         });
   }
+}
 
+class StuAttendance {
+  final String objectId;
+  final String name;
+  final String state;
 
-//  String status = '出席';
-
-//  void showPub(int index) {
-//    showModalBottomSheet(
-//        context: context,
-//        builder: (BuildContext context) {
-//          return _shareWidget(index);
-//        });
-//  }
-//
-//  Widget _shareWidget(int i) {
-//    final width = MediaQuery.of(context).size.width;
-//    final FixedExtentScrollController scrollController =
-//        FixedExtentScrollController(initialItem: _selectedColorIndex);
-//    return new Container(
-//      height: 240.0,
-//      child: new Column(
-//        children: <Widget>[
-//          Container(
-//            width: width * 0.92,
-//            child: Row(
-//              children: <Widget>[
-//                Expanded(
-//                    flex: 1,
-//                    child: GestureDetector(
-//                      child: Text(
-//                        '取消',
-//                        style: TextStyle(
-//                            color: Colors.lightBlueAccent, fontSize: 24),
-//                        textAlign: TextAlign.left,
-//                      ),
-//                      onTap: () {
-//                        Navigator.pop(context);
-//                      },
-//                    )),
-//                Expanded(
-//                  flex: 1,
-//                  child: GestureDetector(
-//                    child: Container(
-//                      padding: EdgeInsets.only(top: 5),
-//                      child: Text(
-//                        '确认',
-//                        style: TextStyle(
-//                            color: Colors.lightBlueAccent, fontSize: 24),
-//                        textAlign: TextAlign.right,
-//                      ),
-//                    ),
-//                    onTap: () {
-//                      _update_stuStatu(_listStudentstatus[i].objectId, status);
-//                      Navigator.pop(context);
-//                      initState();
-//                    },
-//                  ),
-//                ),
-//              ],
-//            ),
-//          ),
-//          new Padding(
-//            padding: EdgeInsets.fromLTRB(0.0, 10.0, 0.0, 0.0),
-//            child: new Container(
-//              height: 190.0,
-//              child: new CupertinoPicker(
-//                magnification: 1.0,
-//                scrollController: scrollController,
-//                itemExtent: 35,
-//                backgroundColor: CupertinoColors.white,
-//                useMagnifier: true,
-//                onSelectedItemChanged: (index) {
-//                  setState(() {
-//                    status = Item[index];
-//                  });
-//                },
-//                children: List<Widget>.generate(Item.length, (int index) {
-//                  return Center(
-//                    child: Text(Item[index]),
-//                  );
-//                }),
-//              ),
-//            ),
-//          ),
-//        ],
-//      ),
-//    );
-//  }
+  const StuAttendance({this.objectId, this.name, this.state});
 }

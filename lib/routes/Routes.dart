@@ -12,7 +12,6 @@ final routes={
 //  '/form':(context)=>FormPage(),
 //  '/search':(context,{arguments})=>SearchPage(arguments:arguments),
 };
-
 //固定写法
 var onGenerateRoute=(RouteSettings settings) {
   // 统一处理

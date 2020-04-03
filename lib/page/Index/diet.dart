@@ -1,12 +1,7 @@
+import 'package:date_format/date_format.dart';
 import 'package:flutter/material.dart';
-import 'package:radial_button/widget/circle_floating_button.dart';
-import 'package:teacher_app/module/DietModel.dart';
 import 'package:parse_server_sdk/parse_server_sdk.dart';
-import 'package:teacher_app/module/diet.dart';
 import 'package:teacher_app/util/SizeConfig.dart';
-import 'package:teacher_app/util/type_help.dart';
-
-import 'Item/dietCardItem.dart';
 
 /*
 * 膳食
@@ -21,142 +16,73 @@ class Diet extends StatefulWidget {
 }
 
 class _DietState extends State<Diet> {
-  //將後台數據加載到這裡
-  List<DietModel> _listDiet = [];
-
-  //添加數據到午餐選擇的列表
-  List<DietModel> _listDietSelect = [];
-
-  //添加数据到下午茶的列表中
-  List<DietModel> _listDietAftSel = [];
-
-//  菜單集合
-  List<DietMM> _listFood = [];
-  List<DietMM> _listFoods = [];
-
-  int _isExpanded = -1; //闭合控制  默认全部关闭
-  List<int> list = [0, 1, 2, 3, 4, 5];
-  List<Item> _data = generateItems(8);
-
-  List<Widget> itemsActionBar;
-  GlobalKey<CircleFloatingButtonState> key01 =
-  GlobalKey<CircleFloatingButtonState>();
-
-  fechar() {
-    key01.currentState.close();
+//  初始化方法
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    _getFoodOrder();
   }
 
-  //  查詢 RElation裏的內容
-  Future _gxQuery() async {
-    QueryBuilder queryBuilder =
-        QueryBuilder<ParseObject>(ParseObject('AlbumPhoto'))
-          ..whereRelatedTo('cover', 'Alum', 'LGCgkBMpBB');
-    var rep = await queryBuilder.query();
-    if (rep.success) {
-      for (var data in rep.result) {
-        print('------------------_SUCCESS-----------------');
-        print(data);
-      }
-    } else {
-      print('--------------------_ERROR-------------------');
-    }
-  }
+  var stuObject = ParseObject("Student");
+  List<String> _listStuName = [];
+  List<String> _listId = [];
+  List<FoodDailyOrder> _listFoodDailyOrder = [];
 
-  Future<void> _getDiet() async {
-    //    var group = new ParseObject('FoodGroup');
-//    group.objectId = 'GxDrlmGFS2';
-//
-//    QueryBuilder<ParseObject> queryPost =
-//    QueryBuilder<ParseObject>(ParseObject('FoodGroup'))
-//      ..whereStartsWith('objectId', 'GxDrlmGFS2');
-//
-//    QueryBuilder<ParseObject> queryComment =
-//    QueryBuilder<ParseObject>(ParseObject('Food'))
-//      ..whereEqualTo('group', group)
-//      ..includeObject(['group']);
-//
-//    var apiResponse = await queryComment.query();
-//    print(apiResponse.results);
+  Future<void> _getFoodOrder() async {
+    final ParseUser user = await ParseUser.currentUser() as ParseUser;
+    if (user != null) {
+      QueryBuilder<ParseObject> querUser =
+          QueryBuilder<ParseObject>(ParseObject('_User'))
+            ..whereEqualTo('objectId', user.objectId)
+            ..includeObject(['employee']);
+      var repuser = await querUser.query();
+      if (repuser.result != null) {
+        for (var empdata in repuser.result) {
+          QueryBuilder<ParseObject> queryEmp =
+              QueryBuilder<ParseObject>(ParseObject('Employee'))
+                ..whereEqualTo('objectId', empdata['employee']['objectId'])
+                ..includeObject(['branch']);
+          var repEmp = await queryEmp.query();
+          if (repEmp.result != null) {
+            var objectId;
+            for (var data in repEmp.result) {
+              setState(() {
+                objectId = data['branch']['objectId'];
+              });
+            }
+            QueryBuilder<ParseObject> queryBranch =
+                QueryBuilder<ParseObject>(ParseObject('Student'))
+                  ..whereRelatedTo('students', 'Branch', objectId)
+                  ..includeObject(['member']);
+            var repstulist = await queryBranch.query();
+            if (repstulist.result != null) {
+              for (var datastu in repstulist.result) {
+                setState(() {
+                  _listStuName.add(datastu['member']['displayName']);
+                  _listId.add(datastu['objectId']);
+                  print(datastu['objectId']);
+                });
+                stuObject.set('objectId', datastu['objectId']);
 
-    /*QueryBuilder<ParseObject> queryPost =
-    QueryBuilder<ParseObject>(ParseObject('AlbumPhoto'))
-      ..whereRelatedTo('images', 'Alum', 'ZT7oUnQy1p');
-
-    var apiResponse = await queryPost.query();
-    if(apiResponse.success){
-      var data = apiResponse.results;
-      for (var value in data) {
-        print(value['objectId']);
-      }
-    }*/
-
-//
-//    var food = await ParseObject('Food').getAll();
-//    if (food.success) {
-//      for (var data in food.result) {
-//        print(data['group']['objectId']);
-//        QueryBuilder<ParseObject> queryInfo =
-//            QueryBuilder<ParseObject>(ParseObject('FoodGroup'))
-//              ..whereStartsWith('objectId', data['group']['objectId']);
-//        var foodInfo = await queryInfo.query();
-//        if (foodInfo.success) {
-//          setState(() {
-//            print(foodInfo.result);
-//            for (var foodData in foodInfo.result) {
-//              _listFood
-//                  .add(DietMM(foodData['title'], foodData['cover']['url']));
-//              print(foodData['title'] + '     ' + foodData['cover']['url']);
-//            }
-//          });
-//        }
-//      }
-//    }
-
-    var week = TypeHelp.weekToString(DateTime.now().weekday);
-    var response = await ParseObject('FoodCombo').getAll();
-    if (response.result != null) {
-      for (var data in response.result) {
-        if (week != data['title']) {
-        } else {
-          for (var size in data['size']) {
-            var group = size['group'].toString().substring(0, 2);
-            if (size['group'] == '午膳主菜' ||
-                size['group'] == '午膳副菜' ||
-                group == '加餐') {
-              for (var items in size['items']) {
-                print(items['objectId']);
-                QueryBuilder queryFood =
-                    QueryBuilder<ParseObject>(ParseObject('Food'))
-                      ..whereStartsWith('objectId', items['objectId']);
-                var responseFood = await queryFood.query();
-                if (responseFood.success) {
-                  setState(() {
-                    for (var food in responseFood.result) {
-                      print(food['title']);
-                      print(food['cover']['url']);
-                      _listFood
-                          .add(DietMM(food['title'], food['cover']['url']));
+                QueryBuilder queryfood =
+                    QueryBuilder(ParseObject("FoodDailyOrder"))
+                      ..whereEqualTo('student', stuObject)
+                      ..includeObject(['student']);
+                var repfoodOrder = await queryfood.query();
+                if (repfoodOrder.statusCode == 200) {
+                  if (repfoodOrder.result != null) {
+                    for (var datafood in repfoodOrder.result) {
+                      setState(() {
+                        _listFoodDailyOrder.add(FoodDailyOrder(
+                            objectId: datafood['objectId'],
+                            items: datafood['items'],
+                            date: datafood['date'],
+                            stuName: datastu['member']['displayName'],
+                            packaged: datafood['packaged']));
+                      });
                     }
-                  });
-                }
-              }
-            } else if (size['group'] == '下午茶') {
-              for (var items in size['items']) {
-                print('------------------------>>>>>');
-                print(items['objectId']);
-                QueryBuilder queryFood =
-                    QueryBuilder<ParseObject>(ParseObject('Food'))
-                      ..whereStartsWith('objectId', items['objectId']);
-                var responseFood = await queryFood.query();
-                if (responseFood.success) {
-                  setState(() {
-                    for (var food in responseFood.result) {
-                      print(food['title']);
-                      print(food['cover']['url']);
-                      _listFoods
-                          .add(DietMM(food['title'], food['cover']['url']));
-                    }
-                  });
+                  }
                 }
               }
             }
@@ -164,44 +90,6 @@ class _DietState extends State<Diet> {
         }
       }
     }
-    print('----------------');
-  }
-
-  @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-    itemsActionBar = [
-      FloatingActionButton(
-        heroTag: UniqueKey(),
-        backgroundColor: Colors.greenAccent,
-        onPressed: () {
-          fechar();
-          for (int i = 0; i <= _data.length; i++) {
-            setState(() {
-              _data[i].isExpanded = true;
-            });
-          }
-        },
-        child: Text(
-          '展開\n全部',
-        ),
-      ),
-      FloatingActionButton(
-        heroTag: UniqueKey(),
-        backgroundColor: Colors.orangeAccent,
-        onPressed: () {
-          fechar();
-          for (int i = 0; i <= _data.length; i++) {
-            setState(() {
-              _data[i].isExpanded = false;
-            });
-          }
-        },
-        child: Text('折疊\n全部'),
-      ),
-    ];
-    _getDiet();
   }
 
   @override
@@ -263,125 +151,50 @@ class _DietState extends State<Diet> {
         ),
         preferredSize: Size(double.infinity, 90),
       ),
-      body: SingleChildScrollView(
-        child: Container(
-          child: _buildPanel(width),
-        ),
-      ),
-      floatingActionButton: CircleFloatingButton.floatingActionButton(
-        key: key01,
-        items: itemsActionBar,
-        color: Colors.greenAccent,
-        icon: Icons.add,
-        duration: Duration(milliseconds: 1000),
-        curveAnim: Curves.ease,
-      ),
-    );
-  }
-
-  Widget divider1 = Divider(
-    color: Colors.black12,
-  );
-
-  Widget fenge(width, String title) {
-    return Container(
-      padding: EdgeInsets.fromLTRB(0, 0, 0, 0),
-      width: width,
-      child: Text(
-        title,
-        textAlign: TextAlign.left,
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 18,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPanel(width) {
-    final textTheme = Theme.of(context).textTheme;
-    return ExpansionPanelList(
-      expansionCallback: (int index, bool isExpanded) {
-        setState(() {
-          _data[index].isExpanded = !isExpanded;
-        });
-      },
-      children: _data.map<ExpansionPanel>((Item item) {
-        return ExpansionPanel(
-          headerBuilder: (BuildContext context, bool isExpanded) {
-            return ListTile(
-              title: Row(
-                children: <Widget>[
-                  Expanded(
-                    flex: 2,
-                    child: AspectRatio(
-                      aspectRatio: 1 / 1,
-                      child: Container(
-                        height: SizeConfig.blockSizeHorizontal*10,
-                        width: SizeConfig.blockSizeHorizontal*10,
-                        child: CircleAvatar(
-                          radius: 50,
-                          backgroundImage: NetworkImage(
-                              'https://upload.jianshu.io/users/upload_avatars/2958544/02ddb7097fbe?imageMogr2/auto-orient/strip|imageView2/1/w/240/h/240'),
-                        ),
-                      )
-                    ),
-                  ),
-                  Padding(padding: EdgeInsets.only(left: 15),),
-                  Expanded(
-                    flex: 8,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          '姓名',
-                          style: textTheme.title,
-                        ),
-                        Text("CT1003",style: textTheme.caption,)
-                      ],
-                    ),
-                  )
+      body: ListView(
+        children: <Widget>[
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+                columns: [
+                  DataColumn(label: Text("姓名")),
+                  DataColumn(label: Text('午餐')),
+                  DataColumn(label: Text('下午茶')),
+                  DataColumn(label: Text('加餐')),
                 ],
-              ),
-            );
-          },
-          body: Container(
-            color: Color(0xfff5f5f5),
-            width: width,
-            padding: EdgeInsets.all(10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text('午餐：魚片冬瓜',style: TextStyle(color: Color(0xffa3a3a3)),),
-                Text('下午茶：中式奶黃包/火龍果',style: TextStyle(color: Color(0xffa3a3a3)),),
-                Text('加餐：粟米炒蛋',style: TextStyle(color: Color(0xffa3a3a3)),),
-              ],
-            ),
-          ),
-          isExpanded: item.isExpanded,
-        );
-      }).toList(),
+                rows: _listFoodDailyOrder.map((post) {
+                  return DataRow(cells: [
+                    DataCell(Text(post.stuName)),
+                    DataCell(
+                        Text(formatDate(post.date, [yyyy, '-', mm, '-', dd]))),
+                    DataCell(Text(post.stuName)),
+                    DataCell(Text(post.packaged.toString())),
+                  ]);
+                }).toList()),
+          )
+        ],
+      ),
     );
   }
 }
 
-class Item {
-  Item({
-    this.expandedValue,
-    this.headerValue,
-    this.isExpanded = false,
-  });
+class FoodDailyOrder {
+  final String objectId;
+  final List items;
+  final DateTime date;
+  final String stuName;
+  final bool packaged;
+  final String lunch;
+  final String afTea;
+  final String meal;
 
-  String expandedValue;
-  String headerValue;
-  bool isExpanded;
-}
-
-List<Item> generateItems(int numberOfItems) {
-  return List.generate(numberOfItems, (int index) {
-    return Item(
-      headerValue: 'Panel $index',
-      expandedValue: 'This is item number $index',
-    );
-  });
+  const FoodDailyOrder(
+      {this.lunch,
+      this.afTea,
+      this.meal,
+      this.objectId,
+      this.items,
+      this.date,
+      this.stuName,
+      this.packaged});
 }
