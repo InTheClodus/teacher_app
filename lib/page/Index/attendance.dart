@@ -142,7 +142,7 @@ class _AttendanceState extends State<Attendance> {
                   print(datastu['objectId']);
                 });
               }
-              for (int i = 0; i <= _listId.length; i++) {
+              for (int i = 0; i <_listId.length; i++) {
                 var stu = ParseObject("Student");
                 stu.set("objectId", _listId[i]);
                 QueryBuilder<ParseObject> queryStuSign =
@@ -151,9 +151,7 @@ class _AttendanceState extends State<Attendance> {
                 var stusignRep = await queryStuSign.query();
                 if (stusignRep.result != null) {
                   for (var datastusign in stusignRep.result) {
-                    if (formatDate(
-                        datastusign['date'], [yyyy, '-', mm, '-', dd]) ==
-                        formatDate(DateTime.now(), [yyyy, '-', mm, '-', dd])) {
+                    if (formatDate(datastusign['date'], [yyyy, '-', mm, '-', dd]) == formatDate(DateTime.now(), [yyyy, '-', mm, '-', dd])) {
                       setState(() {
                         _liststuSign.add(StudentSignIn(
                             datastusign['objectId'] == null ? "--" : datastusign['objectId'],
@@ -162,6 +160,15 @@ class _AttendanceState extends State<Attendance> {
                             datastusign['checkOutAt'] == null ? '--:--' : formatDate(datastusign['checkOutAt'].toLocal(), [hh, ':', nn]),
                             _listStuName[i] == null ? 'null' : _listStuName[i]));
                       });
+                    }else {
+                      var stu = ParseObject("Student");
+                      stu.set("objectId", _listId[i]);
+                      var sign = ParseObject("StudentSignIn");
+                      stu.set("objectId", _listId[i]);
+                      sign.set("date", DateTime.now());
+                      sign.set("state", "等待接送");
+                      sign.set("student", stu);
+                      sign.save();
                     }
                   }
                 } else {
@@ -378,6 +385,7 @@ class _AttendanceState extends State<Attendance> {
         ),
       ),
       body: Container(
+        padding: EdgeInsets.only(left: 10,right: 10),
         child: ListView(
           children: <Widget>[
 //            my_calendar(width),

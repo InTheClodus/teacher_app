@@ -11,8 +11,10 @@ class StuAttendState{
       return "缺席";
     }else if(str=="EX"){
       return "早退";
-    }else{
+    }else if(str=='init'){
       return "未點名";
+    }else{
+      return str;
     }
   }
   static String LabelToStatus(String str){

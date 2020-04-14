@@ -61,7 +61,6 @@ class _DietState extends State<Diet> {
                 setState(() {
                   _listStuName.add(datastu['member']['displayName']);
                   _listId.add(datastu['objectId']);
-                  print(datastu['objectId']);
                 });
                 stuObject.set('objectId', datastu['objectId']);
 
@@ -73,6 +72,20 @@ class _DietState extends State<Diet> {
                 if (repfoodOrder.statusCode == 200) {
                   if (repfoodOrder.result != null) {
                     for (var datafood in repfoodOrder.result) {
+//                      datafood['items'].map((fun){
+//                      fun['items'].map((m)=>print(m['objectId'])).toList();
+//                      }).toList();
+                    for(var food in datafood['items']){
+                      for(var foodItem in food['items']){
+                        print(foodItem['objectId']);
+                        QueryBuilder queryFoodInfo=QueryBuilder(ParseObject("Food"))
+                        ..whereEqualTo("objectId", foodItem['objectId']);
+                        var foodInfo=await queryFoodInfo.query();
+                        if(foodInfo.success&&foodInfo.result!=null){
+                          print("-----------${foodInfo.results.first['title']}----------");
+                        }
+                      }
+                    }
                       setState(() {
                         _listFoodDailyOrder.add(FoodDailyOrder(
                             objectId: datafood['objectId'],

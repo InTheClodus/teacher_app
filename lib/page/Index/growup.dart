@@ -113,23 +113,23 @@ class _GrowUpState extends State<GrowUp> with SingleTickerProviderStateMixin {
                     .sort((a, b) => (a.updateAt).compareTo(b.updateAt));
               });
             }
-//        var emp=ParseObject("Employee");
-//        emp.set("objectId", empId);
-//        emp.save();
-//        for (int i = 0; i <_listSignData.length; i++) {
-//          var student=ParseObject("Student");
-//          student.set("objectId", _listSignData[i].stuobjectId);
-//          student.save();
-//          var sign = ParseObject("StudentSign")
-//            ..set("student", student)
-//            ..set("type", "BW")
-//            ..set("value", 170)
-//            ..set('input', emp);
-//          var r=await sign.save();
-//          if(r.statusCode==201){
-//            print('插入成功');
-//          }
-//        }
+        var emp=ParseObject("Employee");
+        emp.set("objectId", empId);
+        emp.save();
+        for (int i = 0; i <_listSignData.length; i++) {
+          var student=ParseObject("Student");
+          student.set("objectId", _listSignData[i].stuobjectId);
+          student.save();
+          var sign = ParseObject("StudentSign")
+            ..set("student", student)
+            ..set("type", "BH")
+            ..set("value", 170)
+            ..set('input', emp);
+          var r=await sign.save();
+          if(r.statusCode==201||r.statusCode==200){
+            print('插入成功');
+          }
+        }
           }
         }
       }
