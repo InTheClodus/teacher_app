@@ -18,7 +18,7 @@ class OrderRecords extends ParseObject implements ParseCloneable {
   @override clone(Map map) => OrderRecords.clone()..fromJson(map);
 
   static const String _keyTableName = 'OrderRecord';
-  static const String keyName = 'OrderName';
+  static const String keyName = 'StudentOrder';
   static const String keyDate='OrderDate';
   static const String keyPrice='OrderPrice';
   static const String keyStatus='OrderStatus';

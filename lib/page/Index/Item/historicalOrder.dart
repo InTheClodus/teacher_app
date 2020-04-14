@@ -30,33 +30,33 @@ class HistoricalOrder extends StatelessWidget {
       onTap: onPressed,
       child: Row(
         children: <Widget>[
-          Expanded(
-            flex: 1,
-            child:AspectRatio(
-              aspectRatio: 1 / 1,
-              child: Container(
-                  alignment: Alignment.center,
-                  decoration: new BoxDecoration(
-                    color: Colors.white,
-                    //设置四周圆角 角度 这里的角度应该为 父Container height 的一半
-                    borderRadius:
-                    BorderRadius.all(Radius.circular(100.0)),
-                    //设置四周边框
-                    border: new Border.all(
-                      width: 2,
-                      color: Color(0xff9EA3BA),
-                    ),
-                  ),
-                  child: Text(
-                    state,
-                    style: TextStyle(
-                      color: Color( 0xff9EA3BA),
-                      fontSize: SizeConfig.blockSizeVertical*1.5,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  )),
-            ),
-          ),
+//          Expanded(
+//            flex: 1,
+//            child:AspectRatio(
+//              aspectRatio: 1 / 1,
+//              child: Container(
+//                  alignment: Alignment.center,
+//                  decoration: new BoxDecoration(
+//                    color: Colors.white,
+//                    //设置四周圆角 角度 这里的角度应该为 父Container height 的一半
+//                    borderRadius:
+//                    BorderRadius.all(Radius.circular(100.0)),
+//                    //设置四周边框
+//                    border: new Border.all(
+//                      width: 2,
+//                      color: Color(0xff9EA3BA),
+//                    ),
+//                  ),
+//                  child: Text(
+//                    state,
+//                    style: TextStyle(
+//                      color: Color( 0xff9EA3BA),
+//                      fontSize: SizeConfig.blockSizeVertical*1.5,
+//                      fontWeight: FontWeight.w500,
+//                    ),
+//                  )),
+//            ),
+//          ),
           Padding(padding: EdgeInsets.only(left: 15),),
           Expanded(
             flex: 8,
