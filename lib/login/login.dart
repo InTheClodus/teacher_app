@@ -3,6 +3,8 @@ import 'package:teacher_app/module/user.dart';
 import 'package:teacher_app/style/myColors.dart';
 import 'package:teacher_app/tab/Tabs.dart';
 import 'package:parse_server_sdk/parse_server_sdk.dart';
+import 'package:teacher_app/widget/CustomDialog.dart';
+import 'package:teacher_app/widget/loading_dialog.dart';
 
 enum FormMode { LOGIN, SIGNUP }
 
@@ -55,10 +57,45 @@ class _LoginState extends State<Login> {
                 new MaterialPageRoute(builder: (context) => new Tabs()),
                 (route) => route == null);
           }
-        } else {
+        }else if(response.statusCode==1){
           setState(() {
             _isLoading = false;
           });
+          print('---------------------ERROR');
+          showDialog(
+              context: context,
+              builder: (_) => new CustomDialog(
+                title: "提示",
+                isCancel: false,
+                confirmColor: Color(0xff47B28E),
+                content: "帳號錯誤",
+              ));
+        } else if(response.statusCode==111||response.statusCode==101){
+          setState(() {
+            _isLoading = false;
+          });
+          print('---------------------ERROR');
+          showDialog(
+              context: context,
+              builder: (_) => new CustomDialog(
+                title: "提示",
+                isCancel: false,
+                confirmColor: Color(0xff47B28E),
+                content: "密碼錯誤",
+              ));
+        }else if(response.statusCode==-1){
+          setState(() {
+            _isLoading = false;
+          });
+          print('---------------------ERROR');
+          showDialog(
+              context: context,
+              builder: (_) => new CustomDialog(
+                title: "提示",
+                isCancel: false,
+                confirmColor: Color(0xff47B28E),
+                content: "服務器連接異常",
+              ));
         }
       } catch (e) {
         print('錯誤: $e');
@@ -127,7 +164,11 @@ class _LoginState extends State<Login> {
 
   Widget _showCircularProgress() {
     if (_isLoading) {
-      return Center(child: const CircularProgressIndicator());
+      return Center(
+        child: CLoadingDialog(
+          text: "登錄中",
+        ),
+      );
     }
     return Container(
       height: 0.0,

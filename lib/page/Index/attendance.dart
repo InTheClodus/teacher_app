@@ -165,7 +165,7 @@ class _AttendanceState extends State<Attendance> {
                       stu.set("objectId", _listId[i]);
                       var sign = ParseObject("StudentSignIn");
                       stu.set("objectId", _listId[i]);
-                      sign.set("date", DateTime.now());
+                      sign.set("date", DateTime.parse(formatDate(DateTime.now(), [yyyy,'-',mm,'-',dd])));
                       sign.set("state", "等待接送");
                       sign.set("student", stu);
                       sign.save();

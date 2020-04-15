@@ -1,9 +1,7 @@
-//import 'package:amap_base/amap_base.dart';
 import 'package:flutter/material.dart';
 import 'package:parse_server_sdk/parse_server_sdk.dart';
 import 'application/application.dart';
 import 'routes/Routes.dart';
-import 'server/ServiceLocator.dart';
 
 class MyApp extends StatefulWidget {
   @override

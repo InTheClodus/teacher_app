@@ -8,9 +8,10 @@ class HistoricalOrder extends StatelessWidget {
   final String stuName;
   final DateTime dateTime;
   final num amount;
+  final num nedReceive;
   final VoidCallback onPressed;
 
-  const HistoricalOrder({Key key, this.state, this.title, this.stuName, this.dateTime, this.amount, this.onPressed}) : super(key: key);
+  const HistoricalOrder({Key key, this.state, this.title, this.stuName, this.dateTime, this.amount,this.nedReceive,this.onPressed}) : super(key: key);
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -20,12 +21,12 @@ class HistoricalOrder extends StatelessWidget {
       padding: EdgeInsets.all(15),
       child: Container(
         margin: EdgeInsets.fromLTRB(5, 5, 5, 5),
-        child: _mineItem(textTheme,title,stuName,dateTime,amount,state),
+        child: _mineItem(textTheme,title,stuName,dateTime,amount,state,nedReceive),
       ),
     );
   }
 
-  Widget _mineItem(textTheme,String title,String stuName,DateTime dateTime,num amount,state) {
+  Widget _mineItem(textTheme,String title,String stuName,DateTime dateTime,num amount,state,nedReceive) {
     return InkWell(
       onTap: onPressed,
       child: Row(
@@ -78,10 +79,20 @@ class HistoricalOrder extends StatelessWidget {
                       ),
                     ),
                     Expanded(
-                      child: Text(
-                        amount.toString(),
-                        style: textTheme.title,
-                        textAlign: TextAlign.end,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: <Widget>[
+                          Text(
+                            "已收"+amount.toString(),
+                            style: TextStyle(color: Color(0xff030303),fontSize: 19),
+                            textAlign: TextAlign.end,
+                          ),
+                          Text(
+                            "共"+nedReceive.toString(),
+                            style: TextStyle(color: Colors.amber,fontSize: 18),
+                            textAlign: TextAlign.end,
+                          )
+                        ],
                       ),
                     )
                   ],
