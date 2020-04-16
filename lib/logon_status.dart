@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:parse_server_sdk/parse_server_sdk.dart';
+import 'package:teacher_app/repositorries/provider_api_employee.dart';
 
 import 'application/application.dart';
 import 'login/login.dart';
@@ -53,10 +54,10 @@ class _DecisionPageState extends State<DecisionPage> {
         if (user != null) {
           _redirectToPage(context, Tabs());
         } else {
-          _redirectToPage(context, Login());
+          _redirectToPage(context, Login(EmployeeProviderApi()));
         }
       } else {
-        _redirectToPage(context, Login());
+        _redirectToPage(context, Login(EmployeeProviderApi()));
         setState(() {
           _parseServerState =
           '解析服务器不可用\n 由于 ${response.error.toString()}';

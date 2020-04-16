@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:teacher_app/base/api_response.dart';
+import 'package:teacher_app/domian/collection_utils.dart';
+import 'package:teacher_app/module/employee.dart';
 import 'package:teacher_app/module/user.dart';
+import 'package:teacher_app/repositorries/contract_provider_employee.dart';
 import 'package:teacher_app/style/myColors.dart';
 import 'package:teacher_app/tab/Tabs.dart';
 import 'package:parse_server_sdk/parse_server_sdk.dart';
@@ -9,13 +13,14 @@ import 'package:teacher_app/widget/loading_dialog.dart';
 enum FormMode { LOGIN, SIGNUP }
 
 class Login extends StatefulWidget {
+  const Login(this.employeeProvideContract);
+  final EmployeeProvideContract employeeProvideContract;
   @override
   _LoginState createState() => _LoginState();
 }
 
 class _LoginState extends State<Login> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>(); //用于检查输入框是否为空
-
   String _email;
   String _password;
 
@@ -52,11 +57,8 @@ class _LoginState extends State<Login> {
           _isLoading = false;
         });
         if (response.success) {
-          if (_formMode == FormMode.LOGIN) {
-            Navigator.of(context).pushAndRemoveUntil(
-                new MaterialPageRoute(builder: (context) => new Tabs()),
-                (route) => route == null);
-          }
+          _getEmpInfo();
+
         }else if(response.statusCode==1){
           setState(() {
             _isLoading = false;
@@ -106,6 +108,30 @@ class _LoginState extends State<Login> {
     }
   }
 
+  Future<void> _getEmpInfo()async{
+    final ParseUser user=await ParseUser.currentUser() as ParseUser;
+    if(user!=null){
+      QueryBuilder query=QueryBuilder(ParseObject('_User'))
+          ..whereEqualTo('objectId', user.objectId)
+          ..includeObject(['employee']);
+      var rep =await query.query();
+      if(rep.success&&isValidList(rep.results)){
+        print(rep.results.first['employee']['objectId']);
+        final Emloyee emloyee=Emloyee();
+        var re=await widget.employeeProvideContract.getById(rep.results.first['employee']['objectId']);
+        if(re.success){
+          for(var data in re.results){
+            print("_________"+data.toString());
+          }
+        }
+        if (_formMode == FormMode.LOGIN) {
+          Navigator.of(context).pushAndRemoveUntil(
+              new MaterialPageRoute(builder: (context) => new Tabs()),
+                  (route) => route == null);
+        }
+      }
+    }
+  }
   @override
   void initState() {
     // TODO: implement initState

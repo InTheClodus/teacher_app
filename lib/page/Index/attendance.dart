@@ -9,6 +9,7 @@ import 'package:teacher_app/common/eventBus.dart';
 import 'package:teacher_app/login/login.dart';
 import 'package:teacher_app/module/StudentSignIn.dart';
 import 'package:teacher_app/page/Index/diet.dart';
+import 'package:teacher_app/repositorries/provider_api_employee.dart';
 import 'package:teacher_app/server/ServiceLocator.dart';
 import 'package:teacher_app/server/TelAndSmsService.dart';
 import 'package:parse_server_sdk/parse_server_sdk.dart';
@@ -36,7 +37,6 @@ const String MIN_DATETIME = '2019-05-17';
 const String MAX_DATETIME = '2020-12-31';
 
 class _AttendanceState extends State<Attendance> {
-  final TelAndSmsService _service = locator<TelAndSmsService>(); //电话的服务
   String barcode = ""; //掃描二維碼信息
   String phone = '10086';
   bool isMyStu = true;
@@ -333,7 +333,7 @@ class _AttendanceState extends State<Attendance> {
                         ),
                         onPressed: () {
                           Navigator.push(context,
-                              MaterialPageRoute(builder: (context) => Login()));
+                              MaterialPageRoute(builder: (context) => Login(EmployeeProviderApi())));
                         },
                       ),
                       Row(

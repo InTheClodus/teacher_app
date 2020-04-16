@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:parse_server_sdk/parse_server_sdk.dart';
+import 'package:teacher_app/repositorries/reoisitory_employee.dart';
 import 'application/application.dart';
 import 'routes/Routes.dart';
+import 'util/db_util.dart';
 
 class MyApp extends StatefulWidget {
   @override
@@ -9,6 +11,7 @@ class MyApp extends StatefulWidget {
 
 }
 class _MyAppState extends State<MyApp> {
+  EmployeeRepository employeeRepository;
   String text = '';
   @override
   void initState() {
@@ -33,5 +36,9 @@ class _MyAppState extends State<MyApp> {
     masterKey: keyParseMasterKey,
     debug: true,
     coreStore: await CoreStoreSharedPrefsImp.getInstance());
+    await initRepository();
+  }
+  Future<void> initRepository() async {
+    employeeRepository ??= EmployeeRepository.init(await getDB());
   }
 }
