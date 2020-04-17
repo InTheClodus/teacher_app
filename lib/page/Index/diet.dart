@@ -25,82 +25,83 @@ class _DietState extends State<Diet> {
   }
 
   var stuObject = ParseObject("Student");
-  List<String> _listStuName = [];
-  List<String> _listId = [];
   List<FoodDailyOrder> _listFoodDailyOrder = [];
 
   Future<void> _getFoodOrder() async {
     final ParseUser user = await ParseUser.currentUser() as ParseUser;
     if (user != null) {
+
       QueryBuilder<ParseObject> querUser =
           QueryBuilder<ParseObject>(ParseObject('_User'))
             ..whereEqualTo('objectId', user.objectId)
             ..includeObject(['employee']);
       var repuser = await querUser.query();
       if (repuser.result != null) {
-        for (var empdata in repuser.result) {
+          //      查詢當前登錄用戶的員工身分信息
           QueryBuilder<ParseObject> queryEmp =
               QueryBuilder<ParseObject>(ParseObject('Employee'))
-                ..whereEqualTo('objectId', empdata['employee']['objectId'])
+                ..whereEqualTo('objectId', repuser.results.first['employee']['objectId'])
                 ..includeObject(['branch']);
           var repEmp = await queryEmp.query();
           if (repEmp.result != null) {
-            var objectId;
-            for (var data in repEmp.result) {
-              setState(() {
-                objectId = data['branch']['objectId'];
-              });
-            }
             QueryBuilder<ParseObject> queryBranch =
                 QueryBuilder<ParseObject>(ParseObject('Student'))
-                  ..whereRelatedTo('students', 'Branch', objectId)
+                  ..whereRelatedTo('students', 'Branch', repEmp.results.first['branch']['objectId'])
                   ..includeObject(['member']);
             var repstulist = await queryBranch.query();
             if (repstulist.result != null) {
               for (var datastu in repstulist.result) {
-                setState(() {
-                  _listStuName.add(datastu['member']['displayName']);
-                  _listId.add(datastu['objectId']);
-                });
                 stuObject.set('objectId', datastu['objectId']);
-
                 QueryBuilder queryfood =
                     QueryBuilder(ParseObject("FoodDailyOrder"))
                       ..whereEqualTo('student', stuObject)
-                      ..includeObject(['student']);
+                      ..includeObject(['student','items']);
                 var repfoodOrder = await queryfood.query();
                 if (repfoodOrder.statusCode == 200) {
                   if (repfoodOrder.result != null) {
                     for (var datafood in repfoodOrder.result) {
-
-                    print("---------------------------------------------------------------------------------");
-                    for(var food in datafood['items']){
+                      print("---------------------------------------------------------------------------------");
+                      List<String>_list=[];
+                      for (var food in datafood['items']) {
                         print(food['items']['objectId']);
-                        QueryBuilder queryFoodInfo=QueryBuilder(ParseObject("Food"))
-                        ..whereEqualTo("objectId", food['items']['objectId']);
-                        var foodInfo=await queryFoodInfo.query();
-                        if(foodInfo.success&&foodInfo.result!=null){
-                          print("-----------${foodInfo.results.first['title']}----------");
+                        QueryBuilder queryFoodInfo = QueryBuilder(
+                            ParseObject("Food"))
+                          ..whereEqualTo("objectId", food['items']['objectId']);
+                        var foodInfo = await queryFoodInfo.query();
+                        if (foodInfo.success && foodInfo.result != null) {
+
+                          for (var dataFoodInfo in foodInfo.result) {
+                            _list.add(dataFoodInfo['title']);
+                            print(_list);
+                          }
                         }
-                    }
+                      }
                       setState(() {
                         _listFoodDailyOrder.add(FoodDailyOrder(
                             objectId: datafood['objectId'],
                             items: datafood['items'],
-                            date: datafood['date'],
+                            lunch: _list[0]==null||_list[0]==''?"無":_list[0],
+                            afTea: _list[1]==null||_list[1]==''?"無":_list[1],
+                            meal:  _list[2]==null||_list[2]==''?"無":_list[2],
+                            date:  datafood['date'],
                             stuName: datastu['member']['displayName'],
                             packaged: datafood['packaged']));
                       });
-                    print("---------------------------------------------------------------------------------");
+                      print("---------------------------------------------------------------------------------");
                     }
                   }
                 }
               }
             }
           }
-        }
       }
     }
+  }
+
+  Future<Null> _refresh() async {
+    _listFoodDailyOrder.clear();
+    await _getFoodOrder();
+    return;
   }
 
   @override
@@ -162,29 +163,31 @@ class _DietState extends State<Diet> {
         ),
         preferredSize: Size(double.infinity, 90),
       ),
-      body: ListView(
-        children: <Widget>[
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-                columns: [
-                  DataColumn(label: Text("姓名")),
-                  DataColumn(label: Text('午餐')),
-                  DataColumn(label: Text('下午茶')),
-                  DataColumn(label: Text('加餐')),
-                ],
-                rows: _listFoodDailyOrder.map((post) {
-                  return DataRow(cells: [
-                    DataCell(Text(post.stuName)),
-                    DataCell(
-                        Text(formatDate(post.date, [yyyy, '-', mm, '-', dd]))),
-                    DataCell(Text(post.stuName)),
-                    DataCell(Text(post.packaged.toString())),
-                  ]);
-                }).toList()),
-          )
-        ],
-      ),
+      body: RefreshIndicator(
+        child: ListView(
+          children: <Widget>[
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                  columns: [
+                    DataColumn(label: Text("姓名")),
+                    DataColumn(label: Text('午餐')),
+                    DataColumn(label: Text('下午茶')),
+                    DataColumn(label: Text('加餐')),
+                  ],
+                  rows: _listFoodDailyOrder.map((post) {
+                    return DataRow(cells: [
+                      DataCell(Text(post.stuName)),
+                      DataCell(Text(post.lunch)),
+                      DataCell(Text(post.afTea)),
+                      DataCell(Text(post.meal)),
+                    ]);
+                  }).toList()),
+            )
+          ],
+        ),
+        onRefresh: _refresh,
+      )
     );
   }
 }

@@ -5,13 +5,14 @@ import 'package:date_format/date_format.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cupertino_date_picker/flutter_cupertino_date_picker.dart';
-import 'package:teacher_app/common/eventBus.dart';
+import 'package:teacher_app/base/api_response.dart';
+
+import 'package:teacher_app/domian/collection_utils.dart';
 import 'package:teacher_app/login/login.dart';
 import 'package:teacher_app/module/StudentSignIn.dart';
 import 'package:teacher_app/page/Index/diet.dart';
+import 'package:teacher_app/repositorries/contract_provider_employee.dart';
 import 'package:teacher_app/repositorries/provider_api_employee.dart';
-import 'package:teacher_app/server/ServiceLocator.dart';
-import 'package:teacher_app/server/TelAndSmsService.dart';
 import 'package:parse_server_sdk/parse_server_sdk.dart';
 import 'package:teacher_app/util/SizeConfig.dart';
 import 'package:teacher_app/widget/calendarshow/flutter_clean_calendar.dart';
@@ -29,6 +30,9 @@ import 'growup.dart';
 * 通知家長接送
 * */
 class Attendance extends StatefulWidget {
+  const Attendance(this.employeeProvideContract);
+
+  final EmployeeProvideContract employeeProvideContract;
   @override
   _AttendanceState createState() => _AttendanceState();
 }
@@ -106,83 +110,50 @@ class _AttendanceState extends State<Attendance> {
     );
   }
 
-  Future<void> _getStuStatus() async {
-    final ParseUser user = await ParseUser.currentUser() as ParseUser;
-    if (user != null) {
-      QueryBuilder<ParseObject> querUser =
-      QueryBuilder<ParseObject>(ParseObject('_User'))
-        ..whereEqualTo('objectId', user.objectId)
-        ..includeObject(['employee']);
-      var repuser = await querUser.query();
-//      獲取所有學生姓名
-      if (repuser.result != null) {
-        for (var empdata in repuser.result) {
-          QueryBuilder<ParseObject> queryEmp =
-          QueryBuilder<ParseObject>(ParseObject('Employee'))
-            ..whereEqualTo('objectId', empdata['employee']['objectId'])
-            ..includeObject(['branch']);
-          var repEmp = await queryEmp.query();
-          if (repEmp.result != null) {
-            var objectId;
-            for (var data in repEmp.result) {
+  Future<void> _getStuStatu()async{
+    final ApiResponse response =await widget.employeeProvideContract.getByUser();
+    if(response.success){
+      print(response.results.first['objectId']);
+      QueryBuilder<ParseObject> queryBranch =
+      QueryBuilder<ParseObject>(ParseObject('Student'))
+        ..whereRelatedTo('students', 'Branch', response.results.first['branch']['objectId'])
+        ..includeObject(['member']);
+      var repstulist = await queryBranch.query();
+      if (repstulist.result != null) {
+        for (var datastu in repstulist.result) {
+          setState(() {
+            _listStuName.add(datastu['member']['displayName']);
+            _listId.add(datastu['objectId']);
+            print(datastu['objectId']);
+          });
+        }
+        for (int i = 0; i <_listId.length; i++) {
+          var stu = ParseObject("Student");
+          stu.set("objectId", _listId[i]);
+          QueryBuilder<ParseObject> queryStuSign =
+          QueryBuilder<ParseObject>(ParseObject('StudentSignIn'))
+            ..whereGreaterThan('date',DateTime.parse(formatDate(DateTime.now(), [yyyy,'-',mm,'-',dd])))
+            ..whereEqualTo("student", stu);
+          var stusignRep = await queryStuSign.query();
+          if (stusignRep.success&&isValidList(stusignRep.results)) {
+            for (var datastusign in stusignRep.result) {
               setState(() {
-                objectId = data['branch']['objectId'];
+                _liststuSign.add(StudentSignIn(
+                    datastusign['objectId'] == null ? "--" : datastusign['objectId'],
+                    datastusign['checkInAt'] == null ? '--:--' : formatDate(datastusign['checkInAt'].toLocal(), [hh, ':', nn]),
+                    datastusign['state'] == null ? "--" : datastusign['state'],
+                    datastusign['checkOutAt'] == null ? '--:--' : formatDate(datastusign['checkOutAt'].toLocal(), [hh, ':', nn]),
+                    _listStuName[i] == null ? 'null' : _listStuName[i]));
               });
             }
-            QueryBuilder<ParseObject> queryBranch =
-            QueryBuilder<ParseObject>(ParseObject('Student'))
-              ..whereRelatedTo('students', 'Branch', objectId)
-              ..includeObject(['member']);
-            var repstulist = await queryBranch.query();
-            if (repstulist.result != null) {
-              for (var datastu in repstulist.result) {
-                setState(() {
-                  _listStuName.add(datastu['member']['displayName']);
-                  _listId.add(datastu['objectId']);
-                  print(datastu['objectId']);
-                });
-              }
-              for (int i = 0; i <_listId.length; i++) {
-                var stu = ParseObject("Student");
-                stu.set("objectId", _listId[i]);
-                QueryBuilder<ParseObject> queryStuSign =
-                QueryBuilder<ParseObject>(ParseObject('StudentSignIn'))
-                  ..whereEqualTo("student", stu);
-                var stusignRep = await queryStuSign.query();
-                if (stusignRep.result != null) {
-                  for (var datastusign in stusignRep.result) {
-                    if (formatDate(datastusign['date'], [yyyy, '-', mm, '-', dd]) == formatDate(DateTime.now(), [yyyy, '-', mm, '-', dd])) {
-                      setState(() {
-                        _liststuSign.add(StudentSignIn(
-                            datastusign['objectId'] == null ? "--" : datastusign['objectId'],
-                            datastusign['checkInAt'] == null ? '--:--' : formatDate(datastusign['checkInAt'].toLocal(), [hh, ':', nn]),
-                            datastusign['state'] == null ? "--" : datastusign['state'],
-                            datastusign['checkOutAt'] == null ? '--:--' : formatDate(datastusign['checkOutAt'].toLocal(), [hh, ':', nn]),
-                            _listStuName[i] == null ? 'null' : _listStuName[i]));
-                      });
-                    }else {
-                      var stu = ParseObject("Student");
-                      stu.set("objectId", _listId[i]);
-                      var sign = ParseObject("StudentSignIn");
-                      stu.set("objectId", _listId[i]);
-                      sign.set("date", DateTime.parse(formatDate(DateTime.now(), [yyyy,'-',mm,'-',dd])));
-                      sign.set("state", "等待接送");
-                      sign.set("student", stu);
-                      sign.save();
-                    }
-                  }
-                } else {
-                  var stu = ParseObject("Student");
-                  stu.set("objectId", _listId[i]);
-                  var sign = ParseObject("StudentSignIn");
-                  stu.set("objectId", _listId[i]);
-                  sign.set("date", DateTime.now());
-                  sign.set("state", "等待接送");
-                  sign.set("student", stu);
-                  sign.save();
-                }
-              }
-            }
+          } else {
+            var stu = ParseObject("Student");
+            stu.set("objectId", _listId[i]);
+            var sign = ParseObject("StudentSignIn");
+            sign.set("date", DateTime.now());
+            sign.set("state", "等待接送");
+            sign.set("student", stu);
+            sign.save();
           }
         }
       }
@@ -199,7 +170,7 @@ class _AttendanceState extends State<Attendance> {
         setState(() {
           _listStuName.clear();
           _liststuSign.clear();
-          _getStuStatus();
+          _getStuStatu();
         });
       }
     } else {
@@ -211,10 +182,17 @@ class _AttendanceState extends State<Attendance> {
         setState(() {
           _listStuName.clear();
           _liststuSign.clear();
-          _getStuStatus();
+          _getStuStatu();
         });
       }
     }
+  }
+  Future<Null> _refresh() async {
+    _listId.clear();
+    _listStuName.clear();
+    _liststuSign.clear();
+    await _getStuStatu();
+    return;
   }
 
   //region 底部彈出框
@@ -278,8 +256,7 @@ class _AttendanceState extends State<Attendance> {
     // TODO: implement initState
     super.initState();
     _selectedEvents = _events[_selectedDay] ?? [];
-    eventBus.on<MyEvent>().listen((MyEvent data) => show(data.text));
-    _getStuStatus();
+    _getStuStatu();
   }
 
   void show(String val) {
@@ -370,7 +347,7 @@ class _AttendanceState extends State<Attendance> {
                                     Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                            builder: (context) => GrowUp()));
+                                            builder: (context) => GrowUp(EmployeeProviderApi())));
                                   })),
                         ],
                       )
@@ -385,19 +362,19 @@ class _AttendanceState extends State<Attendance> {
         ),
       ),
       body: Container(
-        padding: EdgeInsets.only(left: 10,right: 10),
-        child: ListView(
-          children: <Widget>[
-//            my_calendar(width),
-            SingleChildScrollView(
+
+        child:RefreshIndicator(
+          onRefresh: _refresh,
+          child:  ListView(
+            children: <Widget>[
+              SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: DataTable(
                     columns: [
                       DataColumn(label: Text("姓名")),
                       DataColumn(label: Text('到达')),
                       DataColumn(label: Text('离开')),
-                      DataColumn(label: Text('操作')),
-                    ],
+                      DataColumn(label: Text('操作')),],
                     rows: _liststuSign.map((post) {
                       return DataRow(cells: [
                         DataCell(Text(post.stuname)),
@@ -407,9 +384,10 @@ class _AttendanceState extends State<Attendance> {
                             post.state, post.objectId)),
                       ]);
                     }).toList()),
-            )
-          ],
-        ),
+              )
+            ],
+          ),
+        )
       ),
     );
   }

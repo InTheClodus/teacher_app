@@ -7,9 +7,8 @@ import 'package:flutter/services.dart';
 
 import 'application/config.dart';
 import 'main.dart';
-import 'server/ServiceLocator.dart';
 void main() {
-  setupLocator();
+
   if (Platform.isAndroid) {
 //    debugPaintSizeEnabled = true;
     SystemUiOverlayStyle systemUiOverlayStyle =

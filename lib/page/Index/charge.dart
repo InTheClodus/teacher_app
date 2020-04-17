@@ -194,6 +194,13 @@ class _ChargeState extends State<Charge> with SingleTickerProviderStateMixin {
     }
   }
 
+  Future<Null> _refresh() async {
+    _listStuOrder.clear();
+    _listStuOrders.clear();
+    await _getStudentOrders();
+    return;
+  }
+
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
@@ -226,34 +233,40 @@ class _ChargeState extends State<Charge> with SingleTickerProviderStateMixin {
       body: new TabBarView(
         controller: _tabController,
         children: <Widget>[
-          ListView.builder(
-            itemBuilder: (BuildContext context, index) {
-              return HistoricalOrder(
-                title: _listStuOrder[index].title,
-                stuName: _listStuOrder[index].stuName,
-                dateTime: DateTime.parse(_listStuOrder[index].dateFrom),
-                amount: _listStuOrder[index].price,
-                nedReceive: _listStuOrder[index].nedReceive,
-                onPressed: () {
-                  showPub(context, width, textTheme, _listStuOrder, index);
-                },
-              );
-            },
-            itemCount: _listStuOrder.length,
+          RefreshIndicator(
+            child:ListView.builder(
+              itemBuilder: (BuildContext context, index) {
+                return HistoricalOrder(
+                  title: _listStuOrder[index].title,
+                  stuName: _listStuOrder[index].stuName,
+                  dateTime: DateTime.parse(_listStuOrder[index].dateFrom),
+                  amount: _listStuOrder[index].price,
+                  nedReceive: _listStuOrder[index].nedReceive,
+                  onPressed: () {
+                    showPub(context, width, textTheme, _listStuOrder, index);
+                  },
+                );
+              },
+              itemCount: _listStuOrder.length,
+            ),
+            onRefresh: _refresh,
           ),
-          ListView.builder(
-            itemBuilder: (BuildContext context, index) {
-              return HistoricalOrder(
-                title: _listStuOrders[index].title,
-                stuName: _listStuOrders[index].stuName,
-                dateTime: DateTime.parse(_listStuOrders[index].dateFrom),
-                amount: _listStuOrders[index].price,
-                nedReceive: _listStuOrders[index].nedReceive,
-                onPressed: () => print('第${index + 1}個'),
-              );
-            },
-            itemCount: _listStuOrders.length,
-          ),
+          RefreshIndicator(
+            child:ListView.builder(
+              itemBuilder: (BuildContext context, index) {
+                return HistoricalOrder(
+                  title: _listStuOrders[index].title,
+                  stuName: _listStuOrders[index].stuName,
+                  dateTime: DateTime.parse(_listStuOrders[index].dateFrom),
+                  amount: _listStuOrders[index].price,
+                  nedReceive: _listStuOrders[index].nedReceive,
+                  onPressed: () => print('第${index + 1}個'),
+                );
+              },
+              itemCount: _listStuOrders.length,
+            ),
+            onRefresh: _refresh,
+          )
         ],
       ),
     );

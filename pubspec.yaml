@@ -28,14 +28,12 @@ dependencies:
   get_it: ^1.0.3+2
 #  amap_base: ^0.3.5
   date_format: ^1.0.8
-  qrscan: ^0.2.17
   event_bus: ^1.0.1
   toast: ^0.1.5
   radial_button: ^0.1.1
   bubble_tab_indicator: ^0.1.4
   flutter_screenutil: ^1.0.2
   date_utils: ^0.1.0+2
-  nfc_in_flutter: ^2.0.3
   flutter_cupertino_date_picker: ^1.0.12
   cool_ui: ^0.1.15
   timeline_list: ^0.0.3

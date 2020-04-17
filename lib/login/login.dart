@@ -117,11 +117,16 @@ class _LoginState extends State<Login> {
       var rep =await query.query();
       if(rep.success&&isValidList(rep.results)){
         print(rep.results.first['employee']['objectId']);
-        final Emloyee emloyee=Emloyee();
+        Emloyee emloyee=Emloyee();
         var re=await widget.employeeProvideContract.getById(rep.results.first['employee']['objectId']);
         if(re.success){
           for(var data in re.results){
             print("_________"+data.toString());
+            emloyee=data;
+            var rep=await widget.employeeProvideContract.add(emloyee);
+            if(rep.success){
+              print("c插入成gong1");
+            }
           }
         }
         if (_formMode == FormMode.LOGIN) {

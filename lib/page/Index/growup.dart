@@ -2,8 +2,12 @@ import 'package:bubble_tab_indicator/bubble_tab_indicator.dart';
 import 'package:date_format/date_format.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:teacher_app/base/api_response.dart';
+import 'package:teacher_app/domian/collection_utils.dart';
 import 'package:teacher_app/module/StudentSign.dart';
 import 'package:parse_server_sdk/parse_server_sdk.dart';
+import 'package:teacher_app/repositorries/contract_provider_employee.dart';
+import 'package:teacher_app/repositorries/reoisitory_employee.dart';
 import 'package:teacher_app/util/SizeConfig.dart';
 import 'package:teacher_app/widget/calendarshow/simple_gesture_detector.dart';
 import 'package:toast/toast.dart';
@@ -17,16 +21,23 @@ import 'package:toast/toast.dart';
 * */
 
 class GrowUp extends StatefulWidget {
+  const GrowUp(this.employeeProvideContract);
+
+  final EmployeeProvideContract employeeProvideContract;
+
   @override
   _GrowUpState createState() => _GrowUpState();
 }
 
 class _GrowUpState extends State<GrowUp> with SingleTickerProviderStateMixin {
   List<StudentSign> _listSignData = [];
+  List<StudentSign> _listSignDatas = [];
   var student = ParseObject("Student"); //學生的對象
   var employee = ParseObject("Employee");
+  List<String> listStuName = [];
   bool isExpanded = false;
-  int i=0;//標記默認選中身高
+  int i = 0; //標記默認選中身高
+  final TextEditingController _textStuName = TextEditingController();
   final TextEditingController _txtBH = TextEditingController();
   final TextEditingController _txtBW = TextEditingController();
 
@@ -42,128 +53,148 @@ class _GrowUpState extends State<GrowUp> with SingleTickerProviderStateMixin {
     super.dispose();
   }
 
-//  获得学生对应的成长数据
-  Future<void> _getStudentSign(num i) async {
-    var empId;
-    var branchId;
-    final user = await ParseUser.currentUser() as ParseUser;
-    if (user != null) {
-      QueryBuilder<ParseObject> querUser =
-          QueryBuilder<ParseObject>(ParseObject('_User'))
-            ..whereEqualTo('objectId', user.objectId)
-            ..includeObject([
-              'employee',
-            ]);
-      var repuser = await querUser.query();
-      if (repuser.result != null) {
-        repuser.result.map((map) {
+  Future<void> test() async {
+    setState(() {
+      _listSignData.clear();
+    });
+    final ApiResponse response =
+        await widget.employeeProvideContract.getByUser();
+    if (response.success) {
+      QueryBuilder<ParseObject> queryAllStuName =
+          QueryBuilder<ParseObject>(ParseObject('Student'))
+            ..whereRelatedTo('students', 'Branch',
+                response.results.first['branch']['objectId'])
+            //查詢的學生信息是與Branch表的students字段相關對應的BranchObjectId
+            ..includeObject(['member']); //包含會員對象
+      var repAllstuName = await queryAllStuName.query();
+      if (repAllstuName.success && isValidList(repAllstuName.results)) {
+        for (var data in repAllstuName.result) {
           setState(() {
-            empId = map['employee']['objectId'];
+            listStuName.add(data['member']['displayName']);
           });
-        }).toList();
-        QueryBuilder<ParseObject> queryEmp =
-            QueryBuilder<ParseObject>(ParseObject('Employee'))
-              ..whereEqualTo('objectId', empId)
-              ..includeObject(['branch']);
-        var repEmp = await queryEmp.query();
-        if (repEmp.result != null) {
-          repEmp.result.map((map) {
-            setState(() {
-              branchId = map['branch']['objectId'];
-              print("-----------");
-              print(map['branch']['objectId']);
-            });
-          }).toList();
-        }
-
-//        查詢所有學生姓名
-        QueryBuilder<ParseObject> queryAllStuName =
-            QueryBuilder<ParseObject>(ParseObject('Student'))
-              ..whereRelatedTo('students', 'Branch', branchId) //查詢的學生信息是與Branch表的students字段相關對應的BranchObjectId
-              ..includeObject(['member']); //包含會員對象
-        var repAllstuName = await queryAllStuName.query();
-        if (repAllstuName.result != null) {
-          print('會員對象不為空');
-          for (var stuData in repAllstuName.result) {
-            setState(() {
-              student.set("objectId", stuData['objectId']);
-              student.save();
-            });
-            QueryBuilder queryStuSign = QueryBuilder(ParseObject("StudentSign"))
-              ..whereEqualTo('student', student)
-              ..whereEqualTo('type', i==0?'BH':'BW')
-              ..includeObject(['student', 'input']);
-            print(empId);
-            var rep = await queryStuSign.query();
-            if (rep.result != null) {
-              for (var dataSign in rep.result) {
-                print(dataSign["input"]["displayName"]);
-                setState(() {
-                  _listSignData.add(StudentSign(
-                      stuobjectId: stuData['objectId'],
-                      stuName: stuData['member']['displayName'],
-                      type: dataSign['type'],
-                      BHandW:dataSign['value'].toString(),
-                      updateAt: dataSign['updatedAt'],
-                      empobjectId: dataSign["input"]["objectId"]));
-                });
-              }
+          student.set('objectId', data['objectId']);
+          QueryBuilder queryStuSign = QueryBuilder(ParseObject("StudentSign"))
+            ..whereEqualTo('student', student)
+//            ..whereEqualTo('type', i == 0 ? 'BH' : 'BW')
+//            ..whereGreaterThan('createAt', DateTime.parse(formatDate(DateTime.now(), [yyyy,'-',mm,'-',dd])))
+            ..includeObject(['student', 'input']);
+          var rep = await queryStuSign.query();
+          if (rep.statusCode == 200 && isValidList(rep.results)) {
+            print('-------------');
+            rep.result.map((map) {
               setState(() {
-                _listSignData
-                    .sort((a, b) => (a.updateAt).compareTo(b.updateAt));
+                if (map['type'] == "BH") {
+                  _listSignData.add(StudentSign(
+                      stuobjectId: data['objectId'],
+                      stuName: data['member']['displayName'],
+                      type: map['type'],
+                      BHandW: map['value'].toString(),
+                      updateAt: map['updatedAt'],
+                      createAt: map['createdAt'],
+                      empobjectId: map["input"]["objectId"]));
+                } else {
+                  _listSignDatas.add(StudentSign(
+                      stuobjectId: data['objectId'],
+                      stuName: data['member']['displayName'],
+                      type: map['type'],
+                      BHandW: map['value'].toString(),
+                      updateAt: map['updatedAt'],
+                      createAt: map['createdAt'],
+                      empobjectId: map["input"]["objectId"]));
+                }
               });
-            }
-        var emp=ParseObject("Employee");
-        emp.set("objectId", empId);
-        emp.save();
-        for (int i = 0; i <_listSignData.length; i++) {
-          var student=ParseObject("Student");
-          student.set("objectId", _listSignData[i].stuobjectId);
-          student.save();
-          var sign = ParseObject("StudentSign")
-            ..set("student", student)
-            ..set("type", "BH")
-            ..set("value", 170)
-            ..set('input', emp);
-          var r=await sign.save();
-          if(r.statusCode==201||r.statusCode==200){
-            print('插入成功');
-          }
-        }
+            }).toList();
+            setState(() {
+              _listSignData.sort((a, b) => (a.createAt).compareTo(b.createAt));
+            });
+          } else {
+//            print('-----------------無成長紀錄');
+//            var emp = ParseObject("Employee");
+//            emp.set("objectId", response.results.first['objectId']);
+//            emp.save();
+//            var student = ParseObject("Student");
+//            student.set("objectId", data['objectId']);
+//            student.save();
+//            var sign = ParseObject("StudentSign")
+//              ..set("student", student)
+//              ..set("type", "BW")
+//              ..set("value", 70)
+//              ..set('input', emp);
+//            var r = await sign.save();
+//            if (r.statusCode == 201 || r.statusCode == 200) {
+//              print('插入成功');
+//            }
           }
         }
       }
     }
   }
 
-  Future<void> addStudentBAndW(stuId,empId) async {
-    for(int i=0;i<2;i++){
-      student.set("objectId", stuId);
-      employee.set('objectId', empId);
-      student.save();
-      employee.save();
-      var sign = ParseObject("StudentSign")
-        ..set("student", student)
-        ..set("input", employee)
-        ..set("type", i==0?"BH":"BW")
-        ..set("value", i==0?double.parse(_txtBH.text):double.parse(_txtBW.text));
-      var rep = await sign.save();
-      if (rep.statusCode == 201) {
-        _getStudentSign(i);
-        Toast.show("添加成功", context, duration: Toast.LENGTH_SHORT, gravity:  Toast.BOTTOM);
-      }else if(rep.statusCode==111){
-        Toast.show("數據格式錯誤，請檢查", context, duration: Toast.LENGTH_SHORT, gravity:  Toast.BOTTOM);
-      }
+  Future<Null> _refresh() async {
+    _listSignData.clear();
+    await test();
+    return;
+  }
+
+  Future<void> addStudentBAndW(stuId, empId) async {
+    student.set("objectId", stuId);
+    employee.set('objectId', empId);
+    student.save();
+    employee.save();
+    var sign = ParseObject("StudentSign")
+      ..set("student", student)
+      ..set("input", employee)
+      ..set("type", i == 0 ? "BH" : "BW")
+      ..set("value",
+          i == 0 ? double.parse(_txtBH.text) : double.parse(_txtBW.text));
+    var rep = await sign.save();
+    if (rep.statusCode == 201) {
+      setState(() {
+        _listSignData.clear();
+        test();
+      });
+      Toast.show("添加成功", context,
+          duration: Toast.LENGTH_SHORT, gravity: Toast.BOTTOM);
+    } else if (rep.statusCode == 111) {
+      Toast.show("數據格式錯誤，請檢查", context,
+          duration: Toast.LENGTH_SHORT, gravity: Toast.BOTTOM);
     }
   }
+//
+//  Future<void> addStudentBAndWs(stuName, empId) async {
+//    for (int i = 0; i < 2; i++) {
+//      student.set("objectId", stuId);
+//      employee.set('objectId', empId);
+//      student.save();
+//      employee.save();
+//      var sign = ParseObject("StudentSign")
+//        ..set("student", student)
+//        ..set("input", employee)
+//        ..set("type", i == 0 ? "BH" : "BW")
+//        ..set("value", i == 0 ? double.parse(_txtBH.text) : double.parse(_txtBW.text));
+//      var rep = await sign.save();
+//      if (rep.statusCode == 201) {
+//        setState(() {
+//          _listSignData.clear();
+//          test(i);
+//        });
+//        Toast.show("添加成功", context,
+//            duration: Toast.LENGTH_SHORT, gravity: Toast.BOTTOM);
+//      } else if (rep.statusCode == 111) {
+//        Toast.show("數據格式錯誤，請檢查", context,
+//            duration: Toast.LENGTH_SHORT, gravity: Toast.BOTTOM);
+//      }
+//    }
+//  }
 
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-    _getStudentSign(i);
+    test();
     _tabController = new TabController(vsync: this, length: tabs.length);
   }
+
 //  右滑動
   void _onSwipeRight() {
     if (isExpanded) {
@@ -176,8 +207,8 @@ class _GrowUpState extends State<GrowUp> with SingleTickerProviderStateMixin {
     if (isExpanded) {
       print("左滑動");
     }
-
   }
+
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
@@ -188,6 +219,64 @@ class _GrowUpState extends State<GrowUp> with SingleTickerProviderStateMixin {
             '成長紀錄',
             style: TextStyle(color: Colors.white),
           ),
+          actions: <Widget>[
+            IconButton(
+              icon: Icon(Icons.add),
+              onPressed: () {
+                print("點擊");
+                showCupertinoDialog(
+                    context: context,
+                    builder: (context) {
+                      return CupertinoAlertDialog(
+                        title: Text('新增一個學生數據'),
+                        content: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Padding(
+                              padding: EdgeInsets.only(top: 8, bottom: 8),
+                              child: Text("學生姓名"),
+                            ),
+                            CupertinoTextField(
+                              controller: _textStuName,
+                            ),
+                            Padding(
+                              padding: EdgeInsets.only(top: 8, bottom: 8),
+                              child: Text("身高"),
+                            ),
+                            CupertinoTextField(
+                              controller: _txtBH,
+                            ),
+                            Padding(
+                              padding: EdgeInsets.only(top: 8, bottom: 8),
+                              child: Text("體重"),
+                            ),
+                            CupertinoTextField(
+                              controller: _txtBW,
+                            ),
+                          ],
+                        ),
+                        actions: <Widget>[
+                          CupertinoDialogAction(
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                            child: Text('取消'),
+                          ),
+                          CupertinoDialogAction(
+                            onPressed: () {
+                              print(listStuName.contains(_textStuName.text));
+                              print(listStuName);
+                              if (listStuName.contains(_textStuName.text)) {
+                              } else {}
+                            },
+                            child: Text('确定'),
+                          ),
+                        ],
+                      );
+                    });
+              },
+            )
+          ],
           centerTitle: true,
           backgroundColor: Color(0xff2d7fc7),
           shape: RoundedRectangleBorder(
@@ -204,14 +293,6 @@ class _GrowUpState extends State<GrowUp> with SingleTickerProviderStateMixin {
             ),
             tabs: tabs,
             controller: _tabController,
-
-            onTap: (f){
-              setState(() {
-                i=f;
-                _listSignData.clear();
-                _getStudentSign(i);
-              });
-            },
           ),
         ),
         body: SimpleGestureDetector(
@@ -223,7 +304,7 @@ class _GrowUpState extends State<GrowUp> with SingleTickerProviderStateMixin {
             swipeDetectionMoment: SwipeDetectionMoment.onUpdate,
           ),
           child: TabBarView(
-            physics: new NeverScrollableScrollPhysics(),
+//            physics: new NeverScrollableScrollPhysics(),
             controller: _tabController,
             children: <Widget>[
               GrowupWidget('身高'),
@@ -234,8 +315,8 @@ class _GrowUpState extends State<GrowUp> with SingleTickerProviderStateMixin {
   }
 
   Widget GrowupWidget(title) {
-
     return Container(
+        child: RefreshIndicator(
       child: ListView(
         children: <Widget>[
           SingleChildScrollView(
@@ -247,7 +328,7 @@ class _GrowUpState extends State<GrowUp> with SingleTickerProviderStateMixin {
                   DataColumn(label: Text('操作')),
                   DataColumn(label: Text('日期'))
                 ],
-                rows: _listSignData.map((post) {
+                rows:title=="身高"?_listSignData.map((post) {
                   return DataRow(cells: [
                     DataCell(Text(post.stuName)),
                     DataCell(Text(post.BHandW)),
@@ -257,25 +338,17 @@ class _GrowUpState extends State<GrowUp> with SingleTickerProviderStateMixin {
                             context: context,
                             builder: (context) {
                               return CupertinoAlertDialog(
-                                title: Text('新增${post.stuName}紀錄'),
+                                title: Text('新增 ${post.stuName} ${title} 紀錄'),
                                 content: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: <Widget>[
                                     Padding(
                                       padding:
                                           EdgeInsets.only(top: 8, bottom: 8),
-                                      child: Text("身高"),
+                                      child: Text(title),
                                     ),
                                     CupertinoTextField(
                                       controller: _txtBH,
-                                    ),
-                                    Padding(
-                                      padding:
-                                          EdgeInsets.only(top: 8, bottom: 8),
-                                      child: Text("體重"),
-                                    ),
-                                    CupertinoTextField(
-                                      controller: _txtBW,
                                     ),
                                   ],
                                 ),
@@ -288,7 +361,61 @@ class _GrowUpState extends State<GrowUp> with SingleTickerProviderStateMixin {
                                   ),
                                   CupertinoDialogAction(
                                     onPressed: () {
-                                      addStudentBAndW(post.stuobjectId,post.empobjectId);
+                                      addStudentBAndW(
+                                          post.stuobjectId, post.empobjectId);
+                                      Navigator.pop(context);
+                                      print(_txtBW.text);
+                                    },
+                                    child: Text('确定'),
+                                  ),
+                                ],
+                              );
+                            });
+                      },
+                      child: Text(
+                        "新增",
+                        style: TextStyle(color: Colors.blue),
+                      ),
+                    )),
+                    DataCell(Text(
+                        formatDate(post.updateAt, [yyyy, '-', mm, '-', dd])))
+                  ]);
+                }).toList():_listSignDatas.map((post) {
+                  print(post);
+                  return DataRow(cells: [
+                    DataCell(Text(post.stuName)),
+                    DataCell(Text(post.BHandW)),
+                    DataCell(FlatButton(
+                      onPressed: () {
+                        showCupertinoDialog(
+                            context: context,
+                            builder: (context) {
+                              return CupertinoAlertDialog(
+                                title: Text('新增 ${post.stuName} ${title} 紀錄'),
+                                content: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    Padding(
+                                      padding:
+                                      EdgeInsets.only(top: 8, bottom: 8),
+                                      child: Text(title),
+                                    ),
+                                    CupertinoTextField(
+                                      controller: _txtBH,
+                                    ),
+                                  ],
+                                ),
+                                actions: <Widget>[
+                                  CupertinoDialogAction(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                    },
+                                    child: Text('取消'),
+                                  ),
+                                  CupertinoDialogAction(
+                                    onPressed: () {
+                                      addStudentBAndW(
+                                          post.stuobjectId, post.empobjectId);
                                       Navigator.pop(context);
                                       print(_txtBW.text);
                                     },
@@ -310,7 +437,8 @@ class _GrowUpState extends State<GrowUp> with SingleTickerProviderStateMixin {
           ),
         ],
       ),
-    );
+      onRefresh: _refresh,
+    ));
   }
 }
 
@@ -319,6 +447,7 @@ class StudentSign {
   final String stuName;
   final String BHandW;
   final DateTime updateAt;
+  final DateTime createAt;
   final String type;
   final Object empobjectId;
 
@@ -326,6 +455,7 @@ class StudentSign {
       {this.stuobjectId,
       this.stuName,
       this.BHandW,
+      this.createAt,
       this.updateAt,
       this.type,
       this.empobjectId});

@@ -25,7 +25,6 @@ class _CurriculumPageState extends State<CurriculumPage> {
   final PageController pageController =
       PageController(initialPage: 1, keepPage: true);
   int pageIx = 1;
-  List<CourseLesson> _listCourseLesson = [];
 
   String dateTime = formatDate(DateTime.now(), [yyyy, '年', mm, '月']);
   DateTime _dateTime;
@@ -102,6 +101,11 @@ class _CurriculumPageState extends State<CurriculumPage> {
     }
   }
 
+  Future<Null> _refresh() async {
+    _listDoodle.clear();
+    await _getQueryCourse();
+    return;
+  }
   @override
   void initState() {
     // TODO: implement initState

@@ -52,7 +52,7 @@ class _RollCallPageState extends State<RollCallPage> {
   List<StuAttendance> _listStuAttendance = [];
 
   //region count
-  Future<void> _addStudentToScholar(object,scholarObjectId, value) async {
+  Future<void> _addStudentToScholar(object, scholarObjectId, value) async {
     print("${scholarObjectId}   ${value}");
     scholar.set('objectId', scholarObjectId);
     var attendance = ParseObject("CourseAttendance")
@@ -62,7 +62,7 @@ class _RollCallPageState extends State<RollCallPage> {
       ..set('scholar', scholar)
       ..set('status', StuAttendState.LabelToStatus(value));
     var repatend = await attendance.save();
-    if (repatend.statusCode == 201||repatend.statusCode==200) {
+    if (repatend.statusCode == 201 || repatend.statusCode == 200) {
       _listStuAttendance.clear();
       _getStuCont();
       print('插入成功');
@@ -77,6 +77,13 @@ class _RollCallPageState extends State<RollCallPage> {
     super.initState();
     _getCourseImg();
     _getStuCont();
+  }
+
+  Future<Null> _refresh() async {
+    _listStuAttendance.clear();
+    await _getCourseImg();
+    await _getStuCont();
+    return;
   }
 
   Future<void> _getCourseImg() async {
@@ -96,10 +103,10 @@ class _RollCallPageState extends State<RollCallPage> {
 
   Future<void> _getStuCont() async {
     setState(() {
-      chuxi=0;
-      chidao=0;
-      qingjia=0;
-      quexi=0;
+      chuxi = 0;
+      chidao = 0;
+      qingjia = 0;
+      quexi = 0;
     });
 //      先查询当前上课的是哪个班级
     var location;
@@ -134,10 +141,10 @@ class _RollCallPageState extends State<RollCallPage> {
         print('當查詢BranchRoom不為空');
 //      查詢這個分校的這個課程的學生
         QueryBuilder queryBranchRoom =
-        QueryBuilder<ParseObject>(ParseObject('Student'))
-          ..whereRelatedTo('students', 'Branch',
-              queryRoom.results.first['branch']['objectId'])
-          ..includeObject(['member']);
+            QueryBuilder<ParseObject>(ParseObject('Student'))
+              ..whereRelatedTo('students', 'Branch',
+                  queryRoom.results.first['branch']['objectId'])
+              ..includeObject(['member']);
         var repStu = await queryBranchRoom.query();
         if (repStu.statusCode == 200) {
           print("Student查詢成功");
@@ -157,13 +164,14 @@ class _RollCallPageState extends State<RollCallPage> {
               setState(() {
                 member.set("objectId", dataStu['member']['objectId']);
                 member.save();
-                branch.set('objectId', queryRoom.results.first['branch']['objectId']);
-                print("member-----   "+dataStu['member']['objectId']);
+                branch.set(
+                    'objectId', queryRoom.results.first['branch']['objectId']);
+                print("member-----   " + dataStu['member']['objectId']);
               });
               QueryBuilder queryScholar =
-              QueryBuilder<ParseObject>(ParseObject("Scholar"))
-                ..whereEqualTo('branch', branch)
-                ..whereEqualTo('member', member);
+                  QueryBuilder<ParseObject>(ParseObject("Scholar"))
+                    ..whereEqualTo('branch', branch)
+                    ..whereEqualTo('member', member);
               var repScholar = await queryScholar.query();
               if (repScholar.success) {
                 if (repScholar.result != null) {
@@ -180,20 +188,22 @@ class _RollCallPageState extends State<RollCallPage> {
                       ..whereEqualTo('lesson', lesson)
                       ..whereEqualTo('scholar', scholar)
                       ..includeObject(['scholar']);
-                     var rep = await queryAttendance.query();
+                    var rep = await queryAttendance.query();
 
                     print('簽到表查詢成功${_listStuAttendance.length}');
                     if (rep.result != null) {
-                      for(var repdata in rep.result){
-                        print(repdata['status']+"-----");
+                      for (var repdata in rep.result) {
+                        print(repdata['status'] + "-----");
                         setState(() {
-                          _listStuAttendance.sort((a,b)=>(a.updatedAt).compareTo(b.updatedAt));
+                          _listStuAttendance.sort(
+                              (a, b) => (a.updatedAt).compareTo(b.updatedAt));
                           _listStuAttendance.add(StuAttendance(
                               SobjectId: datasc['objectId'],
                               AttenObjectId: repdata['objectId'],
                               name: dataStu['member']['displayName'],
-                              updatedAt:repdata['updatedAt'],
-                              state: StuAttendState.statusToLabel(repdata['status'])));
+                              updatedAt: repdata['updatedAt'],
+                              state: StuAttendState.statusToLabel(
+                                  repdata['status'])));
                         });
                       }
                     } else {
@@ -209,7 +219,6 @@ class _RollCallPageState extends State<RollCallPage> {
                         print(repatend.statusCode);
                       }
                     }
-
                   }
                 } else {
 //              當學生不存在學員表，則添加
@@ -220,7 +229,7 @@ class _RollCallPageState extends State<RollCallPage> {
                     ..set("branch", branch)
                     ..set("member", member);
                   var repmember = await addScholar.save();
-                  if (repmember.statusCode==201) {
+                  if (repmember.statusCode == 201) {
                     print('插入成功');
                   }
                 }
@@ -230,20 +239,20 @@ class _RollCallPageState extends State<RollCallPage> {
           }
         }
       }
-      _listStuAttendance.map((mmm){
-        if(mmm.state=="遲到"){
+      _listStuAttendance.map((mmm) {
+        if (mmm.state == "遲到") {
           setState(() {
             chidao++;
           });
-        }else if(mmm.state=="出席"){
+        } else if (mmm.state == "出席") {
           setState(() {
             chuxi++;
           });
-        }else if(mmm.state=="請假"){
+        } else if (mmm.state == "請假") {
           setState(() {
             qingjia++;
           });
-        }else if(mmm.state=="缺席"){
+        } else if (mmm.state == "缺席") {
           setState(() {
             quexi++;
           });
@@ -252,8 +261,6 @@ class _RollCallPageState extends State<RollCallPage> {
     }
     //endregion
   }
-
-
 
   @override
   void dispose() {
@@ -265,226 +272,249 @@ class _RollCallPageState extends State<RollCallPage> {
   Widget build(BuildContext context) {
     SizeConfig().init(context);
     return Scaffold(
-        appBar: PreferredSize(
-          child: Stack(
-            children: <Widget>[
-              Container(
-                padding: EdgeInsets.only(left: 10, top: 10),
-                width: double.infinity,
-                height: 96,
-                decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                        colors: [Color(0xffc7d6eb), Color(0xffc7d6eb)]),
-                    borderRadius: BorderRadius.only(
-                        bottomLeft: Radius.circular(25),
-                        bottomRight: Radius.circular(25))),
-              ),
-              Container(
-                padding: EdgeInsets.only(left: 10),
-                width: double.infinity,
-                height: 90,
-                decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                        colors: [Color(0xff2d7fc7), Color(0xff2d7fc7)]),
-                    borderRadius: BorderRadius.only(
-                        bottomLeft: Radius.circular(25),
-                        bottomRight: Radius.circular(25))),
-                child: SafeArea(
-                    child: Stack(
-                  children: <Widget>[
-                    IconButton(
-                      color: Color(0xffffffff),
-                      icon: Icon(Icons.arrow_back),
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                      iconSize: 30,
-                    ),
-                    Center(
-                      child: Text("點名",
-                        style: TextStyle(
-                            color: Color(0xffffffff),
-                            fontSize: 20,
-                            fontWeight: FontWeight.w500),
-                        textAlign: TextAlign.center,
-                      ),
-                    )
-                  ],
-                )),
-              ),
-            ],
-          ),
-          preferredSize: Size(double.infinity, 90),
-        ),
-        body: SingleChildScrollView(
-          child: Column(
-            children: <Widget>[
-              Padding(
-                padding: EdgeInsets.only(top: 10),
-              ),
-              Container(
-                margin: EdgeInsets.only(top: 10),
-                child: Card(
-                  //z轴的高度，设置card的阴影
-                  elevation: 5,
-                  //设置shape，这里设置成了R角
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(10.0)),
+      appBar: PreferredSize(
+        child: Stack(
+          children: <Widget>[
+            Container(
+              padding: EdgeInsets.only(left: 10, top: 10),
+              width: double.infinity,
+              height: 96,
+              decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                      colors: [Color(0xffc7d6eb), Color(0xffc7d6eb)]),
+                  borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(25),
+                      bottomRight: Radius.circular(25))),
+            ),
+            Container(
+              padding: EdgeInsets.only(left: 10),
+              width: double.infinity,
+              height: 90,
+              decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                      colors: [Color(0xff2d7fc7), Color(0xff2d7fc7)]),
+                  borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(25),
+                      bottomRight: Radius.circular(25))),
+              child: SafeArea(
+                  child: Stack(
+                children: <Widget>[
+                  IconButton(
+                    color: Color(0xffffffff),
+                    icon: Icon(Icons.arrow_back),
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    iconSize: 30,
                   ),
-                  //对Widget截取的行为，比如这里 Clip.antiAlias 指抗锯齿
-                  clipBehavior: Clip.antiAlias,
-                  semanticContainer: false,
-                  child: Container(
-                    width: MediaQuery.of(context).size.width * 0.9,
-                    height: 170,
-                    child: Center(
-                      child: Container(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: <Widget>[
-                            Container(
-                                width: 150,
-                                height: 150,
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(5.0),
+                  Center(
+                    child: Text(
+                      "點名",
+                      style: TextStyle(
+                          color: Color(0xffffffff),
+                          fontSize: 20,
+                          fontWeight: FontWeight.w500),
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                ],
+              )),
+            ),
+          ],
+        ),
+        preferredSize: Size(double.infinity, 90),
+      ),
+      body: RefreshIndicator(
+          onRefresh: _refresh,
+          child: SingleChildScrollView(
+            child: Column(
+              children: <Widget>[
+                Padding(
+                  padding: EdgeInsets.only(top: 10),
+                ),
+                Container(
+                  margin: EdgeInsets.only(top: 10),
+                  child: Card(
+                    //z轴的高度，设置card的阴影
+                    elevation: 5,
+                    //设置shape，这里设置成了R角
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(10.0)),
+                    ),
+                    //对Widget截取的行为，比如这里 Clip.antiAlias 指抗锯齿
+                    clipBehavior: Clip.antiAlias,
+                    semanticContainer: false,
+                    child: Container(
+                      width: MediaQuery.of(context).size.width * 0.9,
+                      height: 170,
+                      child: Center(
+                        child: Container(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: <Widget>[
+                              Container(
+                                  width: 150,
+                                  height: 150,
                                   child: ClipRRect(
-                                    child: Image.network(
-                                      url != null
-                                          ? url
-                                          : 'https://macauscholar.uat.macau520.com:8443/api/files/macauscholar/e1df8f6a424b8778253b0526ae558d16_course2.jpg',
-                                      fit: BoxFit.cover,
+                                    borderRadius: BorderRadius.circular(5.0),
+                                    child: ClipRRect(
+                                      child: Image.network(
+                                        url != null
+                                            ? url
+                                            : 'https://macauscholar.uat.macau520.com:8443/api/files/macauscholar/e1df8f6a424b8778253b0526ae558d16_course2.jpg',
+                                        fit: BoxFit.cover,
+                                      ),
+                                      borderRadius: BorderRadius.circular(10),
                                     ),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                )),
-                            Container(
-                              height: 160,
-                              padding: EdgeInsets.fromLTRB(5, 10, 0, 0),
-                              width: MediaQuery.of(context).size.width * 0.5,
-                              child: Column(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceAround,
-                                children: <Widget>[
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    children: <Widget>[
-                                      SizedBox(
-                                        width: 10,
-                                      ),
-                                      Text(
-                                        widget.className,
-                                        style: TextStyle(
-                                            fontSize: 20,
-                                            color: Color(0xff234271),
-                                            fontWeight: FontWeight.bold),
-                                      )
-                                    ],
-                                  ),
-                                  Row(
-                                    children: <Widget>[
-                                      Text('地    址:',
-                                        style: TextStyle(color: Color(0xffb5b8c2)),
-                                        textAlign: TextAlign.right,
-                                      ),
-                                      SizedBox(width: 10,),
-                                      Expanded(
-                                        child: Text(widget.adderss == null ? '澳門水灣坑' : widget.adderss,
-                                          softWrap: true,
-                                          overflow: TextOverflow.ellipsis,
-                                          maxLines: 3,
-                                          style: TextStyle(color: Color(0xffb5b8c2)),),
-                                      ),
-                                    ],
-                                  ),
-                                  Row(
-                                    children: <Widget>[
-                                      Text('學生總數:', style: TextStyle(color: Color(0xffb5b8c2)),),
-                                      SizedBox(width: 10,),
-                                      Text(allStu.toString(),
-                                        style: TextStyle(color: Color(0xffb5b8c2)),
-                                      ),
-                                    ],
-                                  ),
-                                  Row(
-                                    children: <Widget>[
-                                      Text('任課教師:',
-                                        style: TextStyle(color: Color(0xffb5b8c2)),
-                                      ),
-                                      SizedBox(
-                                        width: 10,
-                                      ),
-                                      Text(
-                                        teaName != null ? teaName : '老師姓名',
-                                        style:
-                                            TextStyle(color: Color(0xffb5b8c2)),
-                                      )
-                                    ],
-                                  ),
-                                ],
+                                  )),
+                              Container(
+                                height: 160,
+                                padding: EdgeInsets.fromLTRB(5, 10, 0, 0),
+                                width: MediaQuery.of(context).size.width * 0.5,
+                                child: Column(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceAround,
+                                  children: <Widget>[
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.start,
+                                      children: <Widget>[
+                                        SizedBox(
+                                          width: 10,
+                                        ),
+                                        Text(
+                                          widget.className,
+                                          style: TextStyle(
+                                              fontSize: 20,
+                                              color: Color(0xff234271),
+                                              fontWeight: FontWeight.bold),
+                                        )
+                                      ],
+                                    ),
+                                    Row(
+                                      children: <Widget>[
+                                        Text(
+                                          '地    址:',
+                                          style: TextStyle(
+                                              color: Color(0xffb5b8c2)),
+                                          textAlign: TextAlign.right,
+                                        ),
+                                        SizedBox(
+                                          width: 10,
+                                        ),
+                                        Expanded(
+                                          child: Text(
+                                            widget.adderss == null
+                                                ? '澳門水灣坑'
+                                                : widget.adderss,
+                                            softWrap: true,
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 3,
+                                            style: TextStyle(
+                                                color: Color(0xffb5b8c2)),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Row(
+                                      children: <Widget>[
+                                        Text(
+                                          '學生總數:',
+                                          style: TextStyle(
+                                              color: Color(0xffb5b8c2)),
+                                        ),
+                                        SizedBox(
+                                          width: 10,
+                                        ),
+                                        Text(
+                                          allStu.toString(),
+                                          style: TextStyle(
+                                              color: Color(0xffb5b8c2)),
+                                        ),
+                                      ],
+                                    ),
+                                    Row(
+                                      children: <Widget>[
+                                        Text(
+                                          '任課教師:',
+                                          style: TextStyle(
+                                              color: Color(0xffb5b8c2)),
+                                        ),
+                                        SizedBox(
+                                          width: 10,
+                                        ),
+                                        Text(
+                                          teaName != null ? teaName : '老師姓名',
+                                          style: TextStyle(
+                                              color: Color(0xffb5b8c2)),
+                                        )
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-              //region 出勤狀態
-              new Container(
-                color: Colors.white,
-                child: new Padding(
-                  padding: const EdgeInsets.only(
-                    top: 10.0,
-                    bottom: 10.0,
-                  ),
-                  child: new Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      new ContactItem(
-                        count: chuxi.toString(),
-                        title: '出席',
-                      ),
-                      new ContactItem(
-                        count: qingjia.toString(),
-                        title: '請假',
-                        onPressed: (){
-                        },
-                      ),
-                      new ContactItem(
-                        count: chidao.toString(),
-                        title: '遲到',
-                      ),
-                      new ContactItem(
-                        count: quexi.toString(),
-                        title: '缺席',
-                      ),
-                    ],
+                //region 出勤狀態
+                new Container(
+                  color: Colors.white,
+                  child: new Padding(
+                    padding: const EdgeInsets.only(
+                      top: 10.0,
+                      bottom: 10.0,
+                    ),
+                    child: new Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        new ContactItem(
+                          count: chuxi.toString(),
+                          title: '出席',
+                        ),
+                        new ContactItem(
+                          count: qingjia.toString(),
+                          title: '請假',
+                          onPressed: () {},
+                        ),
+                        new ContactItem(
+                          count: chidao.toString(),
+                          title: '遲到',
+                        ),
+                        new ContactItem(
+                          count: quexi.toString(),
+                          title: '缺席',
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              //endregion
-              Container(
-                height: 500,
-                child: ListView.builder(
-                  itemBuilder: (BuildContext context, int index) {
-                    return RollCallItem(
-                        _listStuAttendance[index].name,
-                        _buildPopoverButton(
-                          _listStuAttendance[index].state,
-                          _listStuAttendance[index].SobjectId,
-                          _listStuAttendance[index].AttenObjectId,
-                        ));
-                  },
-                  itemCount: _listStuAttendance.length,
-                ),
-              )
-            ],
-          ),
-        ));
+                //endregion
+                Container(
+                  height: 500,
+                  child: ListView.builder(
+                    itemBuilder: (BuildContext context, int index) {
+                      return RollCallItem(
+                          _listStuAttendance[index].name,
+                          _buildPopoverButton(
+                            _listStuAttendance[index].state,
+                            _listStuAttendance[index].SobjectId,
+                            _listStuAttendance[index].AttenObjectId,
+                          ));
+                    },
+                    itemCount: _listStuAttendance.length,
+                  ),
+                )
+              ],
+            ),
+          )),
+    );
   }
 
-  Widget _buildPopoverButton(String btnTitle, SobjectId,AttObjectId) {
+  Widget _buildPopoverButton(String btnTitle, SobjectId, AttObjectId) {
     return CupertinoPopoverButton(
         popoverHeight: 160,
         child: Container(
@@ -509,7 +539,7 @@ class _RollCallPageState extends State<RollCallPage> {
                 child: Text("出席"),
                 onTap: () {
                   print('出席');
-                  _addStudentToScholar(AttObjectId,SobjectId, '出席');
+                  _addStudentToScholar(AttObjectId, SobjectId, '出席');
                   Navigator.pop(context);
                   return true;
                 },
@@ -519,7 +549,7 @@ class _RollCallPageState extends State<RollCallPage> {
                 child: Text("遲到"),
                 onTap: () {
                   print('遲到');
-                  _addStudentToScholar(AttObjectId,SobjectId, '遲到');
+                  _addStudentToScholar(AttObjectId, SobjectId, '遲到');
                   Navigator.pop(context);
                   return true;
                 },
@@ -529,7 +559,7 @@ class _RollCallPageState extends State<RollCallPage> {
                 child: Text("早退"),
                 onTap: () {
                   print('早退');
-                  _addStudentToScholar(AttObjectId,SobjectId, '早退');
+                  _addStudentToScholar(AttObjectId, SobjectId, '早退');
                   Navigator.pop(context);
                   return true;
                 },
@@ -539,7 +569,7 @@ class _RollCallPageState extends State<RollCallPage> {
                 child: Text("請假"),
                 onTap: () {
                   print('請假');
-                  _addStudentToScholar(AttObjectId,SobjectId,'請假');
+                  _addStudentToScholar(AttObjectId, SobjectId, '請假');
                   Navigator.pop(context);
                   return true;
                 },
@@ -549,7 +579,7 @@ class _RollCallPageState extends State<RollCallPage> {
                 child: Text("缺席"),
                 onTap: () {
                   print('缺席');
-                  _addStudentToScholar(AttObjectId,SobjectId, '缺席');
+                  _addStudentToScholar(AttObjectId, SobjectId, '缺席');
                   Navigator.pop(context);
                   return true;
                 },
@@ -567,5 +597,10 @@ class StuAttendance {
   final String state;
   final DateTime updatedAt;
 
-  const StuAttendance({this.SobjectId,this.AttenObjectId, this.name, this.state,this.updatedAt});
+  const StuAttendance(
+      {this.SobjectId,
+      this.AttenObjectId,
+      this.name,
+      this.state,
+      this.updatedAt});
 }
