@@ -78,8 +78,7 @@ class _ChargeState extends State<Charge> with SingleTickerProviderStateMixin {
 //        如果登錄的學生是員工身份，
         QueryBuilder<ParseObject> queryEmp =
             QueryBuilder<ParseObject>(ParseObject('Employee'))
-              ..whereEqualTo(
-                  'objectId', repuser.results.first['employee']['objectId'])
+              ..whereEqualTo('objectId', repuser.results.first['employee']['objectId'])
               ..includeObject(['branch']);
         var repEmp = await queryEmp.query();
 

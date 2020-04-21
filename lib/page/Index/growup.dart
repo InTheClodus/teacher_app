@@ -76,9 +76,10 @@ class _GrowUpState extends State<GrowUp> with SingleTickerProviderStateMixin {
           QueryBuilder queryStuSign = QueryBuilder(ParseObject("StudentSign"))
             ..whereEqualTo('student', student)
 //            ..whereEqualTo('type', i == 0 ? 'BH' : 'BW')
-//            ..whereGreaterThan('createAt', DateTime.parse(formatDate(DateTime.now(), [yyyy,'-',mm,'-',dd])))
+            ..whereGreaterThan('createdAt', DateTime.parse(formatDate(DateTime.now(), [yyyy,'-',mm,'-','01'])))
             ..includeObject(['student', 'input']);
           var rep = await queryStuSign.query();
+          print(rep.results);
           if (rep.statusCode == 200 && isValidList(rep.results)) {
             print('-------------');
             rep.result.map((map) {
@@ -136,7 +137,7 @@ class _GrowUpState extends State<GrowUp> with SingleTickerProviderStateMixin {
     return;
   }
 
-  Future<void> addStudentBAndW(stuId, empId) async {
+  Future<void> addStudentBAndW(stuId, empId,HorW) async {
     student.set("objectId", stuId);
     employee.set('objectId', empId);
     student.save();
@@ -144,7 +145,7 @@ class _GrowUpState extends State<GrowUp> with SingleTickerProviderStateMixin {
     var sign = ParseObject("StudentSign")
       ..set("student", student)
       ..set("input", employee)
-      ..set("type", i == 0 ? "BH" : "BW")
+      ..set("type", HorW)
       ..set("value",
           i == 0 ? double.parse(_txtBH.text) : double.parse(_txtBW.text));
     var rep = await sign.save();
@@ -160,6 +161,7 @@ class _GrowUpState extends State<GrowUp> with SingleTickerProviderStateMixin {
           duration: Toast.LENGTH_SHORT, gravity: Toast.BOTTOM);
     }
   }
+
 //
 //  Future<void> addStudentBAndWs(stuName, empId) async {
 //    for (int i = 0; i < 2; i++) {
@@ -220,62 +222,62 @@ class _GrowUpState extends State<GrowUp> with SingleTickerProviderStateMixin {
             style: TextStyle(color: Colors.white),
           ),
           actions: <Widget>[
-            IconButton(
-              icon: Icon(Icons.add),
-              onPressed: () {
-                print("點擊");
-                showCupertinoDialog(
-                    context: context,
-                    builder: (context) {
-                      return CupertinoAlertDialog(
-                        title: Text('新增一個學生數據'),
-                        content: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Padding(
-                              padding: EdgeInsets.only(top: 8, bottom: 8),
-                              child: Text("學生姓名"),
-                            ),
-                            CupertinoTextField(
-                              controller: _textStuName,
-                            ),
-                            Padding(
-                              padding: EdgeInsets.only(top: 8, bottom: 8),
-                              child: Text("身高"),
-                            ),
-                            CupertinoTextField(
-                              controller: _txtBH,
-                            ),
-                            Padding(
-                              padding: EdgeInsets.only(top: 8, bottom: 8),
-                              child: Text("體重"),
-                            ),
-                            CupertinoTextField(
-                              controller: _txtBW,
-                            ),
-                          ],
-                        ),
-                        actions: <Widget>[
-                          CupertinoDialogAction(
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                            child: Text('取消'),
-                          ),
-                          CupertinoDialogAction(
-                            onPressed: () {
-                              print(listStuName.contains(_textStuName.text));
-                              print(listStuName);
-                              if (listStuName.contains(_textStuName.text)) {
-                              } else {}
-                            },
-                            child: Text('确定'),
-                          ),
-                        ],
-                      );
-                    });
-              },
-            )
+//            IconButton(
+//              icon: Icon(Icons.add),
+//              onPressed: () {
+//                print("點擊");
+//                showCupertinoDialog(
+//                    context: context,
+//                    builder: (context) {
+//                      return CupertinoAlertDialog(
+//                        title: Text('新增一個學生數據'),
+//                        content: Column(
+//                          crossAxisAlignment: CrossAxisAlignment.start,
+//                          children: <Widget>[
+//                            Padding(
+//                              padding: EdgeInsets.only(top: 8, bottom: 8),
+//                              child: Text("學生姓名"),
+//                            ),
+//                            CupertinoTextField(
+//                              controller: _textStuName,
+//                            ),
+//                            Padding(
+//                              padding: EdgeInsets.only(top: 8, bottom: 8),
+//                              child: Text("身高"),
+//                            ),
+//                            CupertinoTextField(
+//                              controller: _txtBH,
+//                            ),
+//                            Padding(
+//                              padding: EdgeInsets.only(top: 8, bottom: 8),
+//                              child: Text("體重"),
+//                            ),
+//                            CupertinoTextField(
+//                              controller: _txtBW,
+//                            ),
+//                          ],
+//                        ),
+//                        actions: <Widget>[
+//                          CupertinoDialogAction(
+//                            onPressed: () {
+//                              Navigator.pop(context);
+//                            },
+//                            child: Text('取消'),
+//                          ),
+//                          CupertinoDialogAction(
+//                            onPressed: () {
+//                              print(listStuName.contains(_textStuName.text));
+//                              print(listStuName);
+//                              if (listStuName.contains(_textStuName.text)) {
+//                              } else {}
+//                            },
+//                            child: Text('确定'),
+//                          ),
+//                        ],
+//                      );
+//                    });
+//              },
+//            )
           ],
           centerTitle: true,
           backgroundColor: Color(0xff2d7fc7),
@@ -307,8 +309,10 @@ class _GrowUpState extends State<GrowUp> with SingleTickerProviderStateMixin {
 //            physics: new NeverScrollableScrollPhysics(),
             controller: _tabController,
             children: <Widget>[
-              GrowupWidget('身高'),
-              GrowupWidget('體重'),
+              _listSignData.length == 0 ? Center(child: Text("沒有任何紀錄"))
+                  : GrowupWidget('身高'),
+              _listSignData.length == 0 ? Center(child: Text("沒有任何紀錄"))
+                  : GrowupWidget('體重'),
             ],
           ),
         ));
@@ -328,112 +332,113 @@ class _GrowUpState extends State<GrowUp> with SingleTickerProviderStateMixin {
                   DataColumn(label: Text('操作')),
                   DataColumn(label: Text('日期'))
                 ],
-                rows:title=="身高"?_listSignData.map((post) {
-                  return DataRow(cells: [
-                    DataCell(Text(post.stuName)),
-                    DataCell(Text(post.BHandW)),
-                    DataCell(FlatButton(
-                      onPressed: () {
-                        showCupertinoDialog(
-                            context: context,
-                            builder: (context) {
-                              return CupertinoAlertDialog(
-                                title: Text('新增 ${post.stuName} ${title} 紀錄'),
-                                content: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    Padding(
-                                      padding:
-                                          EdgeInsets.only(top: 8, bottom: 8),
-                                      child: Text(title),
-                                    ),
-                                    CupertinoTextField(
-                                      controller: _txtBH,
-                                    ),
-                                  ],
-                                ),
-                                actions: <Widget>[
-                                  CupertinoDialogAction(
-                                    onPressed: () {
-                                      Navigator.pop(context);
-                                    },
-                                    child: Text('取消'),
-                                  ),
-                                  CupertinoDialogAction(
-                                    onPressed: () {
-                                      addStudentBAndW(
-                                          post.stuobjectId, post.empobjectId);
-                                      Navigator.pop(context);
-                                      print(_txtBW.text);
-                                    },
-                                    child: Text('确定'),
-                                  ),
-                                ],
-                              );
-                            });
-                      },
-                      child: Text(
-                        "新增",
-                        style: TextStyle(color: Colors.blue),
-                      ),
-                    )),
-                    DataCell(Text(
-                        formatDate(post.updateAt, [yyyy, '-', mm, '-', dd])))
-                  ]);
-                }).toList():_listSignDatas.map((post) {
-                  print(post);
-                  return DataRow(cells: [
-                    DataCell(Text(post.stuName)),
-                    DataCell(Text(post.BHandW)),
-                    DataCell(FlatButton(
-                      onPressed: () {
-                        showCupertinoDialog(
-                            context: context,
-                            builder: (context) {
-                              return CupertinoAlertDialog(
-                                title: Text('新增 ${post.stuName} ${title} 紀錄'),
-                                content: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    Padding(
-                                      padding:
-                                      EdgeInsets.only(top: 8, bottom: 8),
-                                      child: Text(title),
-                                    ),
-                                    CupertinoTextField(
-                                      controller: _txtBH,
-                                    ),
-                                  ],
-                                ),
-                                actions: <Widget>[
-                                  CupertinoDialogAction(
-                                    onPressed: () {
-                                      Navigator.pop(context);
-                                    },
-                                    child: Text('取消'),
-                                  ),
-                                  CupertinoDialogAction(
-                                    onPressed: () {
-                                      addStudentBAndW(
-                                          post.stuobjectId, post.empobjectId);
-                                      Navigator.pop(context);
-                                      print(_txtBW.text);
-                                    },
-                                    child: Text('确定'),
-                                  ),
-                                ],
-                              );
-                            });
-                      },
-                      child: Text(
-                        "新增",
-                        style: TextStyle(color: Colors.blue),
-                      ),
-                    )),
-                    DataCell(Text(
-                        formatDate(post.updateAt, [yyyy, '-', mm, '-', dd])))
-                  ]);
-                }).toList()),
+                rows: title == "身高"
+                    ? _listSignData.map((post) {
+                        return DataRow(cells: [
+                          DataCell(Text(post.stuName)),
+                          DataCell(Text(post.BHandW)),
+                          DataCell(FlatButton(
+                            onPressed: () {
+                              showCupertinoDialog(
+                                  context: context,
+                                  builder: (context) {
+                                    return CupertinoAlertDialog(
+                                      title: Text(
+                                          '新增 ${post.stuName} ${title} 紀錄'),
+                                      content: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: <Widget>[
+                                          Padding(
+                                            padding: EdgeInsets.only(
+                                                top: 8, bottom: 8),
+                                            child: Text(title),
+                                          ),
+                                          CupertinoTextField(
+                                            controller: _txtBH,
+                                          ),
+                                        ],
+                                      ),
+                                      actions: <Widget>[
+                                        CupertinoDialogAction(
+                                          onPressed: () {
+                                            Navigator.pop(context);
+                                          },
+                                          child: Text('取消'),
+                                        ),
+                                        CupertinoDialogAction(
+                                          onPressed: () {
+                                            addStudentBAndW(post.stuobjectId,
+                                                post.empobjectId,"BH");
+                                            Navigator.pop(context);
+                                            print(_txtBW.text);
+                                          },
+                                          child: Text('确定'),
+                                        ),
+                                      ],
+                                    );
+                                  });
+                            },
+                            child: Text(
+                              "新增",
+                              style: TextStyle(color: Colors.blue),
+                            ),
+                          )),
+                          DataCell(Text(formatDate(
+                              post.updateAt, [yyyy, '-', mm, '-', dd])))
+                        ]);
+                      }).toList()
+                    : _listSignDatas.map((post) {
+                        print(post);
+                        return DataRow(cells: [
+                          DataCell(Text(post.stuName)),
+                          DataCell(Text(post.BHandW)),
+                          DataCell(FlatButton(
+                            onPressed: () {
+                              showCupertinoDialog(
+                                  context: context,
+                                  builder: (context) {
+                                    return CupertinoAlertDialog(
+                                      title: Text('新增 ${post.stuName} ${title} 紀錄'),
+                                      content: Column(
+                                        crossAxisAlignment:CrossAxisAlignment.start,
+                                        children: <Widget>[
+                                          Padding(
+                                            padding: EdgeInsets.only(top: 8, bottom: 8),
+                                            child: Text(title),
+                                          ),
+                                          CupertinoTextField(
+                                            controller: _txtBH,
+                                          ),
+                                        ],
+                                      ),
+                                      actions: <Widget>[
+                                        CupertinoDialogAction(
+                                          onPressed: () {Navigator.pop(context);},
+                                          child: Text('取消'),
+                                        ),
+                                        CupertinoDialogAction(
+                                          onPressed: () {
+                                            addStudentBAndW(post.stuobjectId,
+                                                post.empobjectId,"BW");
+                                            Navigator.pop(context);
+                                            print(_txtBW.text);
+                                          },
+                                          child: Text('确定'),
+                                        ),
+                                      ],
+                                    );
+                                  });
+                            },
+                            child: Text(
+                              "新增",
+                              style: TextStyle(color: Colors.blue),
+                            ),
+                          )),
+                          DataCell(Text(formatDate(
+                              post.updateAt, [yyyy, '-', mm, '-', dd])))
+                        ]);
+                      }).toList()),
           ),
         ],
       ),

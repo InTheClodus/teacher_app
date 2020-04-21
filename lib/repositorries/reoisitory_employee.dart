@@ -89,7 +89,6 @@ class EmployeeRepository implements EmployeeProvideContract{
 
   @override
   Future<ApiResponse> getByUser({bool fromAPi=false,bool fromDb=false}) async{
-    final ParseUser user =await ParseUser.currentUser();
     if(fromAPi){
       return api.getByUser();
     }if(fromDb){

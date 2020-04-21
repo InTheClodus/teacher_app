@@ -33,6 +33,7 @@ class Attendance extends StatefulWidget {
   const Attendance(this.employeeProvideContract);
 
   final EmployeeProvideContract employeeProvideContract;
+
   @override
   _AttendanceState createState() => _AttendanceState();
 }
@@ -65,9 +66,7 @@ class _AttendanceState extends State<Attendance> {
 
   void _handleNewDate(date) {
     setState(() {
-      print(DateTime
-          .now()
-          .weekday);
+      print(DateTime.now().weekday);
       _selectedDay = date;
       _selectedEvents = _events[_selectedDay] ?? [];
     });
@@ -110,9 +109,10 @@ class _AttendanceState extends State<Attendance> {
     );
   }
 
-  Future<void> _getStuStatu()async{
-    final ApiResponse response =await widget.employeeProvideContract.getByUser();
-    if(response.success){
+  Future<void> _getStuStatu() async {
+    final ApiResponse response =
+    await widget.employeeProvideContract.getByUser();
+    if (response.success) {
       print(response.results.first['objectId']);
       QueryBuilder<ParseObject> queryBranch =
       QueryBuilder<ParseObject>(ParseObject('Student'))
@@ -121,36 +121,31 @@ class _AttendanceState extends State<Attendance> {
       var repstulist = await queryBranch.query();
       if (repstulist.result != null) {
         for (var datastu in repstulist.result) {
-          setState(() {
-            _listStuName.add(datastu['member']['displayName']);
-            _listId.add(datastu['objectId']);
-            print(datastu['objectId']);
-          });
-        }
-        for (int i = 0; i <_listId.length; i++) {
           var stu = ParseObject("Student");
-          stu.set("objectId", _listId[i]);
+          stu.set("objectId", datastu['objectId']);
+          print(datastu['objectId']);
           QueryBuilder<ParseObject> queryStuSign =
           QueryBuilder<ParseObject>(ParseObject('StudentSignIn'))
-            ..whereGreaterThan('date',DateTime.parse(formatDate(DateTime.now(), [yyyy,'-',mm,'-',dd])))
+            ..whereGreaterThan('date', DateTime.parse("2020-04-20"))
             ..whereEqualTo("student", stu);
           var stusignRep = await queryStuSign.query();
-          if (stusignRep.success&&isValidList(stusignRep.results)) {
-            for (var datastusign in stusignRep.result) {
-              setState(() {
-                _liststuSign.add(StudentSignIn(
-                    datastusign['objectId'] == null ? "--" : datastusign['objectId'],
-                    datastusign['checkInAt'] == null ? '--:--' : formatDate(datastusign['checkInAt'].toLocal(), [hh, ':', nn]),
-                    datastusign['state'] == null ? "--" : datastusign['state'],
-                    datastusign['checkOutAt'] == null ? '--:--' : formatDate(datastusign['checkOutAt'].toLocal(), [hh, ':', nn]),
-                    _listStuName[i] == null ? 'null' : _listStuName[i]));
-              });
-            }
+          print(stusignRep.result.toString()+"-----------");
+          if (stusignRep.success && isValidList(stusignRep.results)) {
+            setState(() {
+              _liststuSign.add(StudentSignIn(
+                  objectId: stusignRep.results.first['objectId'],
+                  checkInAt: stusignRep.results.first['checkInAt'] == null ? '--:--' : formatDate(stusignRep.results.first['checkInAt'].toLocal(), [hh, ':', nn]),
+                  checkOutAt: stusignRep.results.first['checkOutAt'] == null ? '--:--' : formatDate(stusignRep.results.first['checkOutAt'].toLocal(), [hh, ':', nn]),
+                  state: stusignRep.results.first['state'],
+                  stuname: datastu['member']['displayName']));
+            });
           } else {
+            print(DateTime.now());
             var stu = ParseObject("Student");
-            stu.set("objectId", _listId[i]);
+            stu.set("objectId", datastu['objectId']);
+            print(datastu['objectId']);
             var sign = ParseObject("StudentSignIn");
-            sign.set("date", DateTime.now());
+            sign.set("date", DateTime.parse(formatDate(DateTime.now().toLocal(), [yyyy, '-', mm, '-', dd,'T00'+":","00",":","00.000Z"])));
             sign.set("state", "等待接送");
             sign.set("student", stu);
             sign.save();
@@ -160,11 +155,13 @@ class _AttendanceState extends State<Attendance> {
     }
   }
 
+
   Future<void> updateState(object, value) async {
     if (value != "已離開") {
       var signState = ParseObject('StudentSignIn')
-        ..set('objectId', object)..set('checkInAt', DateTime.now())..set(
-            'state', value);
+        ..set('objectId', object)
+        ..set('checkInAt', DateTime.now())
+        ..set('state', value);
       var rep = await signState.save();
       if (rep.success) {
         setState(() {
@@ -175,8 +172,9 @@ class _AttendanceState extends State<Attendance> {
       }
     } else {
       var signState = ParseObject('StudentSignIn')
-        ..set('objectId', object)..set('checkOutAt', DateTime.now())..set(
-            'state', value);
+        ..set('objectId', object)
+        ..set('checkOutAt', DateTime.now())
+        ..set('state', value);
       var rep = await signState.save();
       if (rep.success) {
         setState(() {
@@ -187,6 +185,7 @@ class _AttendanceState extends State<Attendance> {
       }
     }
   }
+
   Future<Null> _refresh() async {
     _listId.clear();
     _listStuName.clear();
@@ -206,12 +205,9 @@ class _AttendanceState extends State<Attendance> {
   }
 
   Widget _shareWidget() {
-    final width = MediaQuery
-        .of(context)
-        .size
-        .width;
+    final width = MediaQuery.of(context).size.width;
     final FixedExtentScrollController scrollController =
-    FixedExtentScrollController(initialItem: _selectedColorIndex);
+        FixedExtentScrollController(initialItem: _selectedColorIndex);
     return new Container(
       height: 200.0,
       child: new Column(
@@ -270,10 +266,7 @@ class _AttendanceState extends State<Attendance> {
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery
-        .of(context)
-        .size
-        .width;
+    final width = MediaQuery.of(context).size.width;
     SizeConfig().init(context);
     return Scaffold(
       appBar: PreferredSize(
@@ -300,59 +293,63 @@ class _AttendanceState extends State<Attendance> {
                       bottomRight: Radius.circular(25))),
               child: SafeArea(
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  IconButton(
+                    icon: Icon(
+                      Icons.exit_to_app,
+                      color: Colors.white,
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) =>
+                                  Login(EmployeeProviderApi())));
+                    },
+                  ),
+                  Row(
                     children: <Widget>[
-                      IconButton(
-                        icon: Icon(
-                          Icons.exit_to_app,
-                          color: Colors.white,
-                        ),
+                      new Expanded(
+                          child: AttendanceItem(
+                        icons: Icons.account_balance_wallet,
+                        title: '收費',
                         onPressed: () {
-                          Navigator.push(context,
-                              MaterialPageRoute(builder: (context) => Login(EmployeeProviderApi())));
+                          print('收費');
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => Charge()));
                         },
-                      ),
-                      Row(
-                        children: <Widget>[
-                          new Expanded(
-                              child: AttendanceItem(
-                                icons: Icons.account_balance_wallet,
-                                title: '收費',
-                                onPressed: () {
-                                  print('收費');
-                                  Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (context) => Charge()));
-                                },
-                              )),
-                          new Expanded(
-                              child: AttendanceItem(
-                                  icons: Icons.fastfood,
-                                  title: '膳食',
-                                  onPressed: () {
-                                    print('膳食');
-                                    Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (context) => Diet()));
-                                  })),
-                          new Expanded(
-                              child: AttendanceItem(
-                                  icons: Icons.fiber_smart_record,
-                                  title: '成長紀錄',
-                                  onPressed: () {
-                                    print('成長紀錄');
-                                    Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (context) => GrowUp(EmployeeProviderApi())));
-                                  })),
-                        ],
-                      )
+                      )),
+                      new Expanded(
+                          child: AttendanceItem(
+                              icons: Icons.fastfood,
+                              title: '膳食',
+                              onPressed: () {
+                                print('膳食');
+                                Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) => Diet()));
+                              })),
+                      new Expanded(
+                          child: AttendanceItem(
+                              icons: Icons.fiber_smart_record,
+                              title: '成長紀錄',
+                              onPressed: () {
+                                print('成長紀錄');
+                                Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) =>
+                                            GrowUp(EmployeeProviderApi())));
+                              })),
                     ],
-                  )),
+                  )
+                ],
+              )),
             ),
           ],
         ),
@@ -362,33 +359,31 @@ class _AttendanceState extends State<Attendance> {
         ),
       ),
       body: Container(
-
-        child:RefreshIndicator(
-          onRefresh: _refresh,
-          child:  ListView(
-            children: <Widget>[
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: DataTable(
-                    columns: [
-                      DataColumn(label: Text("姓名")),
-                      DataColumn(label: Text('到达')),
-                      DataColumn(label: Text('离开')),
-                      DataColumn(label: Text('操作')),],
-                    rows: _liststuSign.map((post) {
-                      return DataRow(cells: [
-                        DataCell(Text(post.stuname)),
-                        DataCell(Text(post.checkInAt)),
-                        DataCell(Text(post.checkOutAt)),
-                        DataCell(_buildPopoverButton(
-                            post.state, post.objectId)),
-                      ]);
-                    }).toList()),
-              )
-            ],
-          ),
-        )
-      ),
+          child: RefreshIndicator(
+        onRefresh: _refresh,
+        child: ListView(
+          children: <Widget>[
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                  columns: [
+                    DataColumn(label: Text("姓名")),
+                    DataColumn(label: Text('到达')),
+                    DataColumn(label: Text('离开')),
+                    DataColumn(label: Text('操作')),
+                  ],
+                  rows: _liststuSign.map((post) {
+                    return DataRow(cells: [
+                      DataCell(Text(post.stuname)),
+                      DataCell(Text(post.checkInAt)),
+                      DataCell(Text(post.checkOutAt)),
+                      DataCell(_buildPopoverButton(post.state, post.objectId)),
+                    ]);
+                  }).toList()),
+            )
+          ],
+        ),
+      )),
     );
   }
 
@@ -480,9 +475,9 @@ class _AttendanceState extends State<Attendance> {
               ]),
           child: Center(
               child: Text(
-                btnTitle,
-                style: TextStyle(color: Colors.blue, fontSize: 18),
-              )),
+            btnTitle,
+            style: TextStyle(color: Colors.blue, fontSize: 18),
+          )),
         ),
         popoverBuild: (context) {
 //              return Text("satatastas");

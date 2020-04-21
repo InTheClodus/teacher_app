@@ -72,6 +72,7 @@ flutter:
     - img/cat.jpg
     - img/kecheng.png
     - img/place.png
+    - img/imgnull.png
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware.
 

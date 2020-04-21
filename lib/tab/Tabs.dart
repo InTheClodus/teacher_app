@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:teacher_app/page/Index/attendance.dart';
 import 'package:teacher_app/page/curriculum/curriculum_page.dart';
 import 'package:teacher_app/repositorries/provider_api_employee.dart';
+import 'package:teacher_app/repositorries/student_signin/provider_api_studentsignin.dart';
 class Tabs extends StatefulWidget {
   Tabs({Key key}) : super(key: key);
   _TabsState createState() => _TabsState();
@@ -12,7 +13,7 @@ class _TabsState extends State<Tabs> {
   int _currentIndex=0;
   List _pageList=[
     Attendance(EmployeeProviderApi()),
-    CurriculumPage(),
+    CurriculumPage(StudentSignInProviderApi()),
   ];
   @override
   Widget build(BuildContext context) {

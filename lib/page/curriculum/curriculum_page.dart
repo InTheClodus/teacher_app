@@ -3,10 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_cupertino_date_picker/flutter_cupertino_date_picker.dart';
 import 'package:parse_server_sdk/parse_server_sdk.dart';
 import 'package:teacher_app/module/courseLesson.dart';
+import 'package:teacher_app/repositorries/student_signin/contract_provider_studentsignin.dart';
+import 'package:teacher_app/repositorries/student_signin/provider_api_studentsignin.dart';
 import 'package:teacher_app/util/TimeConversion.dart';
 import 'package:teacher_app/widget/calendarshow/flutter_clean_calendar.dart';
 import 'package:timeline_list/timeline.dart';
 import 'package:timeline_list/timeline_model.dart';
+import 'package:toast/toast.dart';
 import 'data/data.dart';
 import 'rollcall_page.dart';
 /*
@@ -17,6 +20,9 @@ const String MIN_DATETIME = '2019-05-17';
 const String MAX_DATETIME = '2020-12-31';
 
 class CurriculumPage extends StatefulWidget {
+  final StudentSignInProvideContract signInProviderApi;
+
+  const CurriculumPage(this.signInProviderApi);
   @override
   _CurriculumPageState createState() => _CurriculumPageState();
 }
@@ -48,36 +54,34 @@ class _CurriculumPageState extends State<CurriculumPage> {
 
 // 檢測用戶是否為教師
   Future<void> _getQueryCourse() async {
+//    var rep=await widget.signInProviderApi.getByUser();
     final ParseUser user = await ParseUser.currentUser() as ParseUser;
     bool istea = false;
-    Object tea;
+    var tea=ParseObject("Teacher");
     if (user != null) {
       QueryBuilder queryIsnTea = QueryBuilder(ParseObject('_User'))
         ..whereEqualTo('objectId', user.objectId)
         ..includeObject(['teacher']);
       var rep = await queryIsnTea.query();
-      if (rep.success) {
-        rep.result.map((map) {
-          if (map['teacher'] != null) {
-            setState(() {
-              tea = map['teacher'];
-              istea = true;
-            });
-          } else {
-            print('當前用戶不是老師身份');
-          }
-        }).toList();
+
+      if(rep.results.first["teacher"]!=null){
+        istea=true;
+        tea.set('objectId', rep.results.first["teacher"]["objectId"]);
+      }else{
+        print('當前用戶不是老師身份');
+        Toast.show("當前用戶不是教員身份", context);
       }
+
       if (istea == true) {
         print("當前身份是老師");
         QueryBuilder quercourseIsmy = QueryBuilder(ParseObject('CourseLesson'))
           ..whereEqualTo('teacher', tea)
+          ..whereGreaterThan("date",DateTime.parse(formatDate(DateTime.now(), [yyyy, '-', mm, '-', dd])))
           ..includeObject(['location']);
         var rep = await quercourseIsmy.query();
         if (rep.success) {
           for (var data in rep.result) {
-            if (formatDate(data['date'], [yyyy, '-', mm, '-', dd]) ==
-                formatDate(DateTime.now(), [yyyy, '-', mm, '-', dd])) {
+
               QueryBuilder queraddres = QueryBuilder(ParseObject('BranchRoom'))
                 ..whereEqualTo('objectId', data['location']['objectId'])
                 ..includeObject(['branch']);
@@ -89,12 +93,11 @@ class _CurriculumPageState extends State<CurriculumPage> {
                     _listDoodle.add(Doodle(
                       name: data['title'],
                       address: datas['branch']['address'],
-                      time: TimeConversion.timeConversion(data['time']),
+                      time: formatDate(data['date'], [yyyy,'-',mm,'-',dd,"  "])+TimeConversion.timeConversion(data['time']),
                     ));
                   });
                 }
               }
-            }
           }
         }
       }
@@ -166,8 +169,8 @@ class _CurriculumPageState extends State<CurriculumPage> {
       ),
       body: Column(
         children: <Widget>[
-          my_calendar(width),
-          Expanded(
+//          my_calendar(width),
+          _listDoodle==null||_listDoodle.length==0?Center(child: Text("沒有課程"),):Expanded(
             child: PageView(
               onPageChanged: (i) => setState(() => pageIx = i),
               controller: pageController,
@@ -311,8 +314,7 @@ class _CurriculumPageState extends State<CurriculumPage> {
           },
           child: Card(
             margin: EdgeInsets.symmetric(vertical: 6.0),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.0)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
             clipBehavior: Clip.antiAlias,
             child: Padding(
                 padding: const EdgeInsets.all(16.0),

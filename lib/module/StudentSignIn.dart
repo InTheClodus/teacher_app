@@ -5,6 +5,6 @@ class StudentSignIn{
   final String checkOutAt;
   final String stuname;
 
-  StudentSignIn( this.objectId,this.checkInAt,this.state, this.checkOutAt, this.stuname);
+  const StudentSignIn({this.objectId,this.checkInAt,this.state, this.checkOutAt, this.stuname});
 
 }

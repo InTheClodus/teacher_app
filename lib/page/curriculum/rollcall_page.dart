@@ -4,6 +4,7 @@ import 'package:date_format/date_format.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:teacher_app/domian/collection_utils.dart';
 import 'package:teacher_app/util/SizeConfig.dart';
 import 'package:teacher_app/util/stu_attend_state.dart';
 import 'package:teacher_app/widget/contact_item.dart';
@@ -34,7 +35,7 @@ class _RollCallPageState extends State<RollCallPage> {
   int quexi = 0; //缺席
   int chidao = 0; //遲到
   int allStu = 0;
-  String url;
+  String url='';
   String teaName;
   String teaObejctId;
   String sk = "即將到達上課時間";
@@ -44,7 +45,7 @@ class _RollCallPageState extends State<RollCallPage> {
   var member = ParseObject("Member");
   var branch = ParseObject("Branch");
   var teacher = ParseObject("Teacher");
-  List<String> _listMember = [];
+//  List<String> _listMember = [];
 
   List<String> _listScholarId = [];
   var CourseobejectId;
@@ -91,7 +92,7 @@ class _RollCallPageState extends State<RollCallPage> {
       ..whereEqualTo('title', widget.className)
       ..includeObject(['course']);
     var rep = await queryimg.query();
-    if (rep.success) {
+    if (rep.success&&isValidList(rep.results)) {
       rep.result.map((map) {
         setState(() {
           url = map['course']['cover']['url'];
@@ -156,7 +157,7 @@ class _RollCallPageState extends State<RollCallPage> {
               allStu = repStu.count;
             });
             for (var dataStu in repStu.result) {
-              _listMember.add(dataStu['member']['objectId']);
+//              _listMember.add(dataStu['member']['objectId']);
               print(dataStu['member']['objectId']);
               print(repStu.count);
               //region Scholar表
@@ -187,6 +188,7 @@ class _RollCallPageState extends State<RollCallPage> {
                       ..whereEqualTo('class', course)
                       ..whereEqualTo('lesson', lesson)
                       ..whereEqualTo('scholar', scholar)
+                      ..orderByDescending("updateAt")
                       ..includeObject(['scholar']);
                     var rep = await queryAttendance.query();
 
@@ -195,8 +197,7 @@ class _RollCallPageState extends State<RollCallPage> {
                       for (var repdata in rep.result) {
                         print(repdata['status'] + "-----");
                         setState(() {
-                          _listStuAttendance.sort(
-                              (a, b) => (a.updatedAt).compareTo(b.updatedAt));
+//                          _listStuAttendance.sort((a, b) => (a.updatedAt).compareTo(b.updatedAt));
                           _listStuAttendance.add(StuAttendance(
                               SobjectId: datasc['objectId'],
                               AttenObjectId: repdata['objectId'],
@@ -261,6 +262,156 @@ class _RollCallPageState extends State<RollCallPage> {
     }
     //endregion
   }
+
+//  Future<void> _getStuConts() async {
+//    setState(() {
+//      chuxi = 0;
+//      chidao = 0;
+//      qingjia = 0;
+//      quexi = 0;
+//    });
+////      先查询当前上课的是哪个班级
+//    var location;
+//    print(widget.className);
+//    //region 頂部Card內容
+//    QueryBuilder queryCourseTitle = QueryBuilder(ParseObject("CourseLesson"))
+//      ..whereEqualTo('title', widget.className)
+//      ..includeObject(['location', 'class', 'teacher']);
+//    var rep = await queryCourseTitle.query();
+//    print(rep.result);
+//    if (rep.result != null) {
+//      rep.result.map((map) {
+//        setState(() {
+//          CourseobejectId = map['objectId'];
+//          location = map['location']['objectId'];
+//          teaName = map['teacher']['displayName'];
+//          lesson.set('objectId', map['objectId']);
+//          course.set("objectId", map["class"]["objectId"]);
+//        });
+//      }).toList();
+//
+//      QueryBuilder queryBranchRoom = QueryBuilder(ParseObject("BranchRoom"))
+//        ..whereEqualTo('objectId', location)
+//        ..includeObject(['branch']);
+//      var queryRoom = await queryBranchRoom.query();
+//      if (queryRoom.result != null) {
+//        print('當查詢BranchRoom不為空');
+////      查詢這個分校的這個課程的學生
+//        QueryBuilder queryBranchRoom =
+//        QueryBuilder<ParseObject>(ParseObject('Student'))
+//          ..whereRelatedTo('students', 'Branch',
+//              queryRoom.results.first['branch']['objectId'])
+//          ..includeObject(['member']);
+//        var repStu = await queryBranchRoom.query();
+//        if (repStu.statusCode == 200) {
+//          print("Student查詢成功");
+//          if (repStu.result != null) {
+////          當查詢學生是否為會員不為空時
+//            print('當查詢學生是否為會員不為空時');
+////        將所有學生的會員信息添加到  _listMember列表中,方便用於在學員表中添加
+//            setState(() {
+//              allStu = repStu.count;
+//            });
+//            for (var dataStu in repStu.result) {
+////            將_listMember中的id放入Scholar表中查找，如果不存在就添加進去
+//              setState(() {
+//                member.set("objectId", dataStu['member']['objectId']);
+//                member.save();
+//                branch.set(
+//                    'objectId', queryRoom.results.first['branch']['objectId']);
+//                print("member-----   " + dataStu['member']['objectId']);
+//              });
+//              QueryBuilder queryScholar =
+//              QueryBuilder<ParseObject>(ParseObject("Scholar"))
+//                ..whereEqualTo('branch', branch)
+//                ..whereEqualTo('member', member);
+//              var repScholar = await queryScholar.query();
+//              if (repScholar.success) {
+//                if (repScholar.result != null) {
+////              當學生存在學員列表
+//                  print("當學生存在學員列表");
+//                  for (var datasc in repScholar.result) {
+//
+//                    scholar.set('objectId', datasc['objectId']);
+//                    QueryBuilder queryAttendance = QueryBuilder<ParseObject>(
+//                        ParseObject('CourseAttendance'))
+//                      ..whereEqualTo('class', course)
+//                      ..whereEqualTo('lesson', lesson)
+//                      ..whereEqualTo('scholar', scholar)
+//                      ..orderByDescending("updateAt")
+//                      ..includeObject(['scholar']);
+//                    var rep = await queryAttendance.query();
+//
+//                    print('簽到表查詢成功${_listStuAttendance.length}');
+//                    if (rep.result != null) {
+//
+//                        setState(() {
+//                          _listStuAttendance.sort((a, b) => (a.updatedAt).compareTo(b.updatedAt));
+//                          _listStuAttendance.add(StuAttendance(
+//                              SobjectId: datasc['objectId'],
+//                              AttenObjectId: rep.results.first['objectId'],
+//                              name: dataStu['member']['displayName'],
+//                              updatedAt: rep.results.first['updatedAt'],
+//                              state: StuAttendState.statusToLabel(rep.results.first['status'])));
+//                        });
+//
+//                    }
+//                    else {
+//                      var attendance = ParseObject("CourseAttendance")
+//                        ..set('class', course)
+//                        ..set('lesson', lesson)
+//                        ..set('scholar', scholar)
+//                        ..set('status', StuAttendState.LabelToStatus("未點名"));
+//                      var repatend = await attendance.save();
+//                      if (repatend.statusCode == 201) {
+//                        print('插入成功');
+//                      } else {
+//                        print(repatend.statusCode);
+//                      }
+//                    }
+//                  }
+//                }
+//                else {
+////              當學生不存在學員表，則添加
+//                  print('該學生不處於學員列表');
+//                  print(branch);
+//                  print(member);
+//                  var addScholar = ParseObject("Scholar")
+//                    ..set("branch", branch)
+//                    ..set("member", member);
+//                  var repmember = await addScholar.save();
+//                  if (repmember.statusCode == 201) {
+//                    print('插入成功');
+//                  }
+//                }
+//              }
+//              //endregion
+//            }
+//          }
+//        }
+//      }
+//      _listStuAttendance.map((mmm) {
+//        if (mmm.state == "遲到") {
+//          setState(() {
+//            chidao++;
+//          });
+//        } else if (mmm.state == "出席") {
+//          setState(() {
+//            chuxi++;
+//          });
+//        } else if (mmm.state == "請假") {
+//          setState(() {
+//            qingjia++;
+//          });
+//        } else if (mmm.state == "缺席") {
+//          setState(() {
+//            quexi++;
+//          });
+//        }
+//      }).toList();
+//    }
+//    //endregion
+//  }
 
   @override
   void dispose() {
@@ -359,8 +510,7 @@ class _RollCallPageState extends State<RollCallPage> {
                                     borderRadius: BorderRadius.circular(5.0),
                                     child: ClipRRect(
                                       child: Image.network(
-                                        url != null
-                                            ? url
+                                        url != '' ? url
                                             : 'https://macauscholar.uat.macau520.com:8443/api/files/macauscholar/e1df8f6a424b8778253b0526ae558d16_course2.jpg',
                                         fit: BoxFit.cover,
                                       ),
@@ -516,7 +666,7 @@ class _RollCallPageState extends State<RollCallPage> {
 
   Widget _buildPopoverButton(String btnTitle, SobjectId, AttObjectId) {
     return CupertinoPopoverButton(
-        popoverHeight: 160,
+        popoverHeight: 200,
         child: Container(
           decoration: BoxDecoration(
               color: Colors.transparent,
