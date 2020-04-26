@@ -11,8 +11,8 @@ import 'package:teacher_app/domian/collection_utils.dart';
 import 'package:teacher_app/login/login.dart';
 import 'package:teacher_app/module/StudentSignIn.dart';
 import 'package:teacher_app/page/Index/diet.dart';
-import 'package:teacher_app/repositorries/contract_provider_employee.dart';
-import 'package:teacher_app/repositorries/provider_api_employee.dart';
+import 'package:teacher_app/repositorries/employee/contract_provider_employee.dart';
+import 'package:teacher_app/repositorries/employee/provider_api_employee.dart';
 import 'package:parse_server_sdk/parse_server_sdk.dart';
 import 'package:teacher_app/util/SizeConfig.dart';
 import 'package:teacher_app/widget/calendarshow/flutter_clean_calendar.dart';
@@ -127,6 +127,7 @@ class _AttendanceState extends State<Attendance> {
           QueryBuilder<ParseObject> queryStuSign =
           QueryBuilder<ParseObject>(ParseObject('StudentSignIn'))
             ..whereGreaterThan('date', DateTime.parse("2020-04-20"))
+//            ..whereStartsWith('date', formatDate(DateTime.now(), [yyyy,'-',mm,'-'+dd]))
             ..whereEqualTo("student", stu);
           var stusignRep = await queryStuSign.query();
           print(stusignRep.result.toString()+"-----------");
@@ -185,6 +186,7 @@ class _AttendanceState extends State<Attendance> {
       }
     }
   }
+
 
   Future<Null> _refresh() async {
     _listId.clear();
@@ -320,7 +322,7 @@ class _AttendanceState extends State<Attendance> {
                           Navigator.push(
                               context,
                               MaterialPageRoute(
-                                  builder: (context) => Charge()));
+                                  builder: (context) => Charge(EmployeeProviderApi())));
                         },
                       )),
                       new Expanded(
@@ -332,7 +334,7 @@ class _AttendanceState extends State<Attendance> {
                                 Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                        builder: (context) => Diet()));
+                                        builder: (context) => Diet(EmployeeProviderApi())));
                               })),
                       new Expanded(
                           child: AttendanceItem(

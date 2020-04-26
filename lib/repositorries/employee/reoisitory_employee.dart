@@ -4,7 +4,7 @@ import 'package:teacher_app/base/api_response.dart';
 import 'package:teacher_app/domian/collection_utils.dart';
 import 'package:teacher_app/module/employee.dart';
 import 'package:teacher_app/module/user.dart';
-import 'package:teacher_app/repositorries/contract_provider_employee.dart';
+import 'package:teacher_app/repositorries/employee/contract_provider_employee.dart';
 import 'package:sembast/sembast.dart';
 
 import 'provider_api_employee.dart';

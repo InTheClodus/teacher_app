@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:parse_server_sdk/parse_server_sdk.dart';
-import 'package:teacher_app/repositorries/provider_api_employee.dart';
+import 'package:teacher_app/repositorries/employee/provider_api_employee.dart';
 
 import 'application/application.dart';
 import 'login/login.dart';

@@ -4,7 +4,7 @@ import 'package:teacher_app/module/employee.dart';
 
 import 'package:teacher_app/module/student_signin.dart';
 
-import '../reoisitory_employee.dart';
+import '../employee/reoisitory_employee.dart';
 import 'contract_provider_studentsignin.dart';
 
 class StudentSignInProviderApi implements StudentSignInProvideContract {

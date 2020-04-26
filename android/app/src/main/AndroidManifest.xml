@@ -16,7 +16,7 @@
 
     <application
         android:name="io.flutter.app.FlutterApplication"
-        android:label="教員APP"
+        android:label="员工"
         android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"
@@ -42,7 +42,7 @@
             android:value="55aae5e170fb971f8a3c6d6f2a6b80df"/>
         <meta-data
             android:name="PGYER_APPID"
-            android:value="649d09e6dbe9986f3577c928198beac0" >
+            android:value="451803f1dac2df2d6b96c0af8bcab7b5" >
         </meta-data>
     </application>
 </manifest>

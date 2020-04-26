@@ -3,7 +3,7 @@ import 'package:teacher_app/base/api_response.dart';
 import 'package:teacher_app/domian/collection_utils.dart';
 import 'package:teacher_app/module/employee.dart';
 import 'package:teacher_app/module/user.dart';
-import 'package:teacher_app/repositorries/contract_provider_employee.dart';
+import 'package:teacher_app/repositorries/employee/contract_provider_employee.dart';
 import 'package:teacher_app/style/myColors.dart';
 import 'package:teacher_app/tab/Tabs.dart';
 import 'package:parse_server_sdk/parse_server_sdk.dart';

@@ -4,8 +4,7 @@ import 'api_error.dart';
 
 class ApiResponse {
   ApiResponse(this.success, this.statusCode, this.results, this.error)
-      : count = results?.length ?? 0,
-        result = results?.isNotEmpty ?? false ? results.first : null;
+      : count = results?.length ?? 0,result = results?.isNotEmpty ?? false ? results.first : null;
 
   final bool success;
   final int statusCode;

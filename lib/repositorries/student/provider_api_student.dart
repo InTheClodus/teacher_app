@@ -3,7 +3,7 @@ import 'package:teacher_app/base/api_response.dart';
 
 import 'package:teacher_app/module/student.dart';
 
-import '../reoisitory_employee.dart';
+import '../employee/reoisitory_employee.dart';
 import 'contract_provider_student.dart';
 
 class StudentProviderApi implements StudentProviderContract{

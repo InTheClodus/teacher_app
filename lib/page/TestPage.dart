@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:teacher_app/base/api_response.dart';
 import 'package:teacher_app/module/employee.dart';
-import 'package:teacher_app/repositorries/contract_provider_employee.dart';
+import 'package:teacher_app/repositorries/employee/contract_provider_employee.dart';
 
 class TestPage extends StatefulWidget {
   const TestPage(this.employeeProvideContract);
@@ -64,8 +64,6 @@ class _TestPageState extends State<TestPage> {
                     ),
                   );
                 });
-
-
           } else {
             return const Center(
               child: Text('No Data'),

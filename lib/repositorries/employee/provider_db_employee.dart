@@ -2,7 +2,7 @@ import 'dart:convert' as json;
 import 'package:teacher_app/base/api_error.dart';
 import 'package:teacher_app/base/api_response.dart';
 import 'package:teacher_app/module/employee.dart';
-import 'package:teacher_app/repositorries/contract_provider_employee.dart';
+import 'package:teacher_app/repositorries/employee/contract_provider_employee.dart';
 import 'package:parse_server_sdk/parse_server_sdk.dart';
 import 'package:sembast/sembast.dart';
 class EmpLoyeeProviderDB implements EmployeeProvideContract{

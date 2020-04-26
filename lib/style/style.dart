@@ -4,10 +4,6 @@ import 'package:flutter/material.dart';
 * 樣式
 * */
 class Style {
-  String _str;
-
-  Style(this._str);
-
   /// Returns a random color.
   static Color next(_str) {
     if (_str == "A") {

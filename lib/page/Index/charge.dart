@@ -1,9 +1,11 @@
 import 'package:bubble_tab_indicator/bubble_tab_indicator.dart';
 import 'package:date_format/date_format.dart';
 import 'package:flutter/material.dart';
+import 'package:teacher_app/base/api_response.dart';
 import 'package:teacher_app/domian/collection_utils.dart';
 import 'package:teacher_app/module/orderRecord.dart';
 import 'package:parse_server_sdk/parse_server_sdk.dart';
+import 'package:teacher_app/repositorries/employee/contract_provider_employee.dart';
 import 'package:teacher_app/widget/CustomDialog.dart';
 import 'package:teacher_app/widget/SegmentControl.dart';
 
@@ -30,6 +32,10 @@ import 'Item/historicalOrder.dart';
 * 但是非本店訂單無法查看訂單詳情；
 * */
 class Charge extends StatefulWidget {
+  const Charge(this.employeeProvideContract);
+
+  final EmployeeProvideContract employeeProvideContract;
+
   @override
   _ChargeState createState() => _ChargeState();
 }
@@ -65,7 +71,7 @@ class _ChargeState extends State<Charge> with SingleTickerProviderStateMixin {
 
 //  c查询订单信息
 
-  Future<void> _getStudentOrders() async {
+  Future<void> _getStudentOrde() async {
     final ParseUser user = await ParseUser.currentUser();
 //    先查询登录的用户属于哪个学校员工
     if (user != null) {
@@ -75,10 +81,11 @@ class _ChargeState extends State<Charge> with SingleTickerProviderStateMixin {
             ..includeObject(['employee']);
       var repuser = await querUser.query();
       if (repuser.success && isValidList(repuser.results)) {
-//        如果登錄的學生是員工身份，
+//        如果登錄的是員工身份，
         QueryBuilder<ParseObject> queryEmp =
             QueryBuilder<ParseObject>(ParseObject('Employee'))
-              ..whereEqualTo('objectId', repuser.results.first['employee']['objectId'])
+              ..whereEqualTo(
+                  'objectId', repuser.results.first['employee']['objectId'])
               ..includeObject(['branch']);
         var repEmp = await queryEmp.query();
 
@@ -115,15 +122,24 @@ class _ChargeState extends State<Charge> with SingleTickerProviderStateMixin {
                       ..whereEqualTo('objectId', stuorderObjectId)
                       ..includeObject(['price']);
                     var repOrderItem = await queryOrderItem.query();
-                    print(repOrderItem.results.first['price']['objectId'].toString() + "PriceID");
-                    if (repOrderItem.success && isValidList(repOrderItem.results)) {
-                      if(repOrderItem.results.first['amount'] !=repOrderItem.results.first['price']['price']){
+                    print(repOrderItem.results.first['price']['objectId']
+                            .toString() +
+                        "PriceID");
+                    if (repOrderItem.success &&
+                        isValidList(repOrderItem.results)) {
+                      if (repOrderItem.results.first['amount'] !=
+                          repOrderItem.results.first['price']['price']) {
                         print("------------------True");
-                      }else{
-                        print('------------------False'+repOrderItem.results.first['amount'].toString()+"---"+repOrderItem.results.first['price']['price'].toString());
+                      } else {
+                        print('------------------False' +
+                            repOrderItem.results.first['amount'].toString() +
+                            "---" +
+                            repOrderItem.results.first['price']['price']
+                                .toString());
                       }
-                      if (repOrderItem.results.first['amount'] < repOrderItem.results.first['price']['price']) {
-                        print(repOrderItem.results.first['price']['objectId'].toString()+">>>>>>>>>>>");
+                      if (repOrderItem.results.first['amount'] <
+                          repOrderItem.results.first['price']['price']) {
+                        print(repOrderItem.results.first['price']['objectId'].toString() + ">>>>>>>>>>>");
                         setState(() {
                           _listStuOrder.add(StudentOrderItem(
                               objectId: repOrderItem.results.first['objectId'],
@@ -143,7 +159,7 @@ class _ChargeState extends State<Charge> with SingleTickerProviderStateMixin {
                               stuId: repOrderItem.results.first['student']['objectId'],
                               priceId: repOrderItem.results.first['price']['objectId'],
                               title: repOrderItem.results.first['price']['title'],
-                              dateTo: formatDate(repStuOrder.results.first['dateTo'], [yyyy, '-', mm, '-', dd]),
+                              dateTo: formatDate(repStuOrder.results.first['dateTo'],[yyyy, '-', mm, '-', dd]),
                               dateFrom: formatDate(repStuOrder.results.first['dateFrom'], [yyyy, '-', mm, '-', dd]),
                               stuName: repStuOrder.results.first['studentName'],
                               nedReceive: repOrderItem.results.first['price']['price'],
@@ -152,6 +168,99 @@ class _ChargeState extends State<Charge> with SingleTickerProviderStateMixin {
                       }
                     }
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Future<void> _getStudentOrders() async {
+    final ApiResponse response = await widget.employeeProvideContract.getByUser();
+//    如果員工信息不為空，查詢所有的學生
+    QueryBuilder<ParseObject> queryBranch =
+        QueryBuilder<ParseObject>(ParseObject('Student'))
+          ..whereRelatedTo('students', 'Branch', response.results.first['branch']['objectId'])
+          ..includeObject(['member']);
+    var repstulist = await queryBranch.query();
+    if (repstulist.success && isValidList(repstulist.results)) {
+//    拿到學生資料之後，查詢是否存在對應的訂單
+      for (var dataStu in repstulist.result) {
+        print(dataStu['member']['displayName']);
+        student.set("objectId", dataStu["objectId"]);
+        QueryBuilder<ParseObject> queryStuOrder = QueryBuilder<ParseObject>(ParseObject("StudentOrder"))
+              ..whereEqualTo("student", student);
+        var repStuOrder = await queryStuOrder.query();
+        if (repStuOrder.success && isValidList(repStuOrder.results)) {
+          for (var dataOrder in repStuOrder.result) {
+            print(dataOrder['objectId'] + "-----objectId----");
+            for (var orderItem in dataOrder['items'].toList()) {
+              stuorderObjectId = orderItem['items']['objectId'];
+              isOrder = true;
+            }
+            if (isOrder == true) {
+              setState(() {
+                isOrder = false;
+              });
+              QueryBuilder queryOrderItem =
+                  QueryBuilder<ParseObject>(ParseObject("StudentOrderItem"))
+                    ..whereEqualTo('objectId', stuorderObjectId)
+                    ..includeObject(['price']);
+              var repOrderItem = await queryOrderItem.query();
+              print(repOrderItem.results.first['price']['objectId'].toString() +
+                  "PriceID");
+              if (repOrderItem.success && isValidList(repOrderItem.results)) {
+                if (repOrderItem.results.first['amount'] !=
+                    repOrderItem.results.first['price']['price']) {
+                  print("------------------True");
+                } else {
+                  print('------------------False' +
+                      repOrderItem.results.first['amount'].toString() +
+                      "---" +
+                      repOrderItem.results.first['price']['price'].toString());
+                }
+                if (repOrderItem.results.first['amount'] <
+                    repOrderItem.results.first['price']['price']) {
+                  print(repOrderItem.results.first['price']['objectId'].toString() + ">>>>>>>>>>>");
+                  setState(() {
+                    _listStuOrder.add(StudentOrderItem(
+                        objectId: repOrderItem.results.first['objectId'],
+                        stuId: repOrderItem.results.first['student']
+                            ['objectId'],
+                        priceId: repOrderItem.results.first['price']
+                            ['objectId'],
+                        title: repOrderItem.results.first['price']['title'],
+                        dateTo: formatDate(repStuOrder.results.first['dateTo'],
+                            [yyyy, '-', mm, '-', dd]),
+                        dateFrom: formatDate(
+                            repStuOrder.results.first['dateFrom'],
+                            [yyyy, '-', mm, '-', dd]),
+                        stuName: repStuOrder.results.first['studentName'],
+                        nedReceive: repOrderItem.results.first['price']
+                            ['price'],
+                        price: repOrderItem.results.first['amount']));
+                  });
+                } else {
+                  setState(() {
+                    _listStuOrders.add(StudentOrderItems(
+                        objectId: repOrderItem.results.first['objectId'],
+                        stuId: repOrderItem.results.first['student']
+                            ['objectId'],
+                        priceId: repOrderItem.results.first['price']
+                            ['objectId'],
+                        title: repOrderItem.results.first['price']['title'],
+                        dateTo: formatDate(repStuOrder.results.first['dateTo'],
+                            [yyyy, '-', mm, '-', dd]),
+                        dateFrom: formatDate(
+                            repStuOrder.results.first['dateFrom'],
+                            [yyyy, '-', mm, '-', dd]),
+                        stuName: repStuOrder.results.first['studentName'],
+                        nedReceive: repOrderItem.results.first['price']
+                            ['price'],
+                        price: repOrderItem.results.first['amount']));
+                  });
                 }
               }
             }
@@ -233,7 +342,7 @@ class _ChargeState extends State<Charge> with SingleTickerProviderStateMixin {
         controller: _tabController,
         children: <Widget>[
           RefreshIndicator(
-            child:ListView.builder(
+            child: ListView.builder(
               itemBuilder: (BuildContext context, index) {
                 return HistoricalOrder(
                   title: _listStuOrder[index].title,
@@ -251,7 +360,7 @@ class _ChargeState extends State<Charge> with SingleTickerProviderStateMixin {
             onRefresh: _refresh,
           ),
           RefreshIndicator(
-            child:ListView.builder(
+            child: ListView.builder(
               itemBuilder: (BuildContext context, index) {
                 return HistoricalOrder(
                   title: _listStuOrders[index].title,
@@ -362,18 +471,20 @@ class _ChargeState extends State<Charge> with SingleTickerProviderStateMixin {
                     highlightElevation: 0,
                     // 点击时阴影隐藏
                     onPressed: () {
-                      if (num.parse(amount.text) > _listStuOrder[index].nedReceive - _listStuOrder[index].price) {
+                      if (num.parse(amount.text) >
+                          _listStuOrder[index].nedReceive -
+                              _listStuOrder[index].price) {
                         showDialog(
                             context: context,
                             builder: (_) => new CustomDialog(
-                              title: "提示",
-                              isCancel: false,
-                              content: "輸入金額過大",
-                            ));
+                                  title: "提示",
+                                  isCancel: false,
+                                  content: "輸入金額過大",
+                                ));
                       } else {
                         AddCashCharges(
                             _listStuOrder[index].objectId,
-                            _listStuOrder[index].price+num.parse(amount.text),
+                            _listStuOrder[index].price + num.parse(amount.text),
                             _listStuOrder[index].stuId,
                             _listStuOrder[index].priceId);
                       }

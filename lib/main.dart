@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:parse_server_sdk/parse_server_sdk.dart';
-import 'package:teacher_app/repositorries/reoisitory_employee.dart';
+import 'package:teacher_app/repositorries/employee/reoisitory_employee.dart';
 import 'application/application.dart';
 import 'routes/Routes.dart';
 import 'util/db_util.dart';
